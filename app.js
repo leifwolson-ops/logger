@@ -16,25 +16,24 @@ request.onupgradeneeded = (event) => {
 request.onsuccess = (event) => {
   db = event.target.result;
   console.log('DB ready');
-  displayTable();
+  displayTable(); // Show initial contents
 };
 
 // =====================
 // Time textbox logic
 // =====================
 const timeBox = document.getElementById('timeBox');
-let currentID = null;
+let currentID = null; // track last entry for edits
 
 function formatDate(date) {
   const pad = n => n.toString().padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-// Replace "arrived" with current time on focus
+// Fill textbox with current time on focus (replace "arrived")
 timeBox.addEventListener('focus', () => {
-  if (timeBox.value === "arrived") {
-    timeBox.value = formatDate(new Date());
-  }
+  const now = new Date();
+  timeBox.value = formatDate(now);
 });
 
 // Save new or updated time on blur
