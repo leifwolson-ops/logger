@@ -31,53 +31,52 @@ function isValidDateTime(str) {
   return !isNaN(date.getTime());
 }
 
+// Optional: pre-fill textbox with current time on focus
 timeBox.addEventListener('focus', () => {
-  const now = new Date();
-  const formattedTime = now.toLocaleString();
-  timeBox.value = formattedTime;
-
-  // Add new entry to DB
-  const transaction = db.transaction(['times'], 'readwrite');
-  const store = transaction.objectStore('times');
-  const requestAdd = store.add({ time: formattedTime });
-
-  requestAdd.onsuccess = (event) => {
-    currentID = event.target.result; // store ID for potential edits
-    displayTable(); // update table after add completes
-  };
+  if (!timeBox.value) { // only if empty
+    const now = new Date();
+    timeBox.value = now.toLocaleString();
+  }
+  // reset background color
+  timeBox.style.backgroundColor = '';
 });
 
+// Handle blur (focus leaves textbox)
 timeBox.addEventListener('blur', () => {
-  if (currentID === null) return; // nothing to update
   const newTime = timeBox.value.trim();
 
-  // Validate date/time format
+  // Validate date/time
   if (!isValidDateTime(newTime)) {
-    timeBox.style.backgroundColor = 'rgba(255, 0, 0, 0.2)'; // reddish tint
-    return;
-  } else {
-    timeBox.style.backgroundColor = ''; // reset to default
+    timeBox.style.backgroundColor = 'rgba(255, 0, 0, 0.2)'; // red tint
+    return; // do not update DB
   }
 
-  // Update database
+  // Value is valid, reset background
+  timeBox.style.backgroundColor = '';
+
   const transaction = db.transaction(['times'], 'readwrite');
   const store = transaction.objectStore('times');
-  const getRequest = store.get(currentID);
 
-  getRequest.onsuccess = () => {
-    const data = getRequest.result;
-    if (!data) return;
-
-    // Only update if value changed
-    if (data.time !== newTime) {
-      data.time = newTime;
-      const updateRequest = store.put(data);
-      updateRequest.onsuccess = () => {
-        console.log('Time updated:', newTime);
-        displayTable(); // refresh table after update
-      };
-    }
-  };
+  if (currentID === null) {
+    // No previous entry → add new
+    const requestAdd = store.add({ time: newTime });
+    requestAdd.onsuccess = (event) => {
+      currentID = event.target.result; // store ID for edits
+      displayTable();
+    };
+  } else {
+    // Existing entry → update
+    const getRequest = store.get(currentID);
+    getRequest.onsuccess = () => {
+      const data = getRequest.result;
+      if (!data) return;
+      if (data.time !== newTime) {
+        data.time = newTime;
+        const updateRequest = store.put(data);
+        updateRequest.onsuccess = () => displayTable();
+      }
+    };
+  }
 });
 
 // =====================
