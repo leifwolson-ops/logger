@@ -16,14 +16,13 @@ request.onupgradeneeded = (event) => {
 request.onsuccess = (event) => {
   db = event.target.result;
   console.log('DB ready');
-  displayTable(); // Show initial contents
+  displayTable(); // Show initial contents when DB is ready
 };
 
 // =====================
 // Time textbox logic
 // =====================
 const timeBox = document.getElementById('timeBox');
-
 let currentID = null; // Track last inserted/edited ID
 
 timeBox.addEventListener('focus', () => {
@@ -35,10 +34,10 @@ timeBox.addEventListener('focus', () => {
   const transaction = db.transaction(['times'], 'readwrite');
   const store = transaction.objectStore('times');
   const requestAdd = store.add({ time: formattedTime });
-  
+
   requestAdd.onsuccess = (event) => {
     currentID = event.target.result; // store ID for potential edits
-    displayTable();
+    displayTable(); // update table after add completes
   };
 });
 
@@ -60,7 +59,7 @@ timeBox.addEventListener('blur', () => {
       const updateRequest = store.put(data);
       updateRequest.onsuccess = () => {
         console.log('Time updated:', newTime);
-        displayTable();
+        displayTable(); // refresh table after update
       };
     }
   };
@@ -70,14 +69,15 @@ timeBox.addEventListener('blur', () => {
 // Display table of DB contents
 // =====================
 function displayTable() {
+  if (!db) return; // DB not ready yet
+
   const tableBody = document.querySelector('#timeTable tbody');
   tableBody.innerHTML = '';
 
   const transaction = db.transaction(['times'], 'readonly');
   const store = transaction.objectStore('times');
-  const requestAll = store.openCursor();
 
-  requestAll.onsuccess = (event) => {
+  store.openCursor().onsuccess = (event) => {
     const cursor = event.target.result;
     if (cursor) {
       const row = document.createElement('tr');
