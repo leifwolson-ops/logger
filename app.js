@@ -25,6 +25,12 @@ request.onsuccess = (event) => {
 const timeBox = document.getElementById('timeBox');
 let currentID = null; // Track last inserted/edited ID
 
+// Helper: validate date/time string
+function isValidDateTime(str) {
+  const date = new Date(str);
+  return !isNaN(date.getTime());
+}
+
 timeBox.addEventListener('focus', () => {
   const now = new Date();
   const formattedTime = now.toLocaleString();
@@ -43,8 +49,17 @@ timeBox.addEventListener('focus', () => {
 
 timeBox.addEventListener('blur', () => {
   if (currentID === null) return; // nothing to update
-  const newTime = timeBox.value;
+  const newTime = timeBox.value.trim();
 
+  // Validate date/time format
+  if (!isValidDateTime(newTime)) {
+    timeBox.style.backgroundColor = 'rgba(255, 0, 0, 0.2)'; // reddish tint
+    return;
+  } else {
+    timeBox.style.backgroundColor = ''; // reset to default
+  }
+
+  // Update database
   const transaction = db.transaction(['times'], 'readwrite');
   const store = transaction.objectStore('times');
   const getRequest = store.get(currentID);
