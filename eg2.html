@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iPhone Portrait Layout</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .input-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .input-row input[type="text"] {
+        margin-left: 5px;
+        width: 80px; /* Reduced width */
+    }
+    .buttons-row {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        margin-left: 10px; /* Align buttons with textboxes */
+    }
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        width: auto;
+        margin-bottom: 20px;
+    }
+    .action-buttons button {
+        margin-bottom: 10px;
+        width: auto; /* Adjust width to fit text */
+        padding: 5px 10px; /* Adjust padding for uniform size */
+    }
+    .comment-box {
+        width: 300px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        border: 1px solid #000;
+        padding: 5px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    .toggle-active {
+        background-color: lightgreen;
+    }
+</style>
+</head>
+<body>
+
+<div class="input-container">
+    <div class="input-row">
+        <input type="radio" name="option" value="1" checked>
+        <input type="text" id="textbox1">
+        <div class="buttons-row">
+            <button onclick="increment('textbox1', -10)">-10</button>
+            <button onclick="increment('textbox1', 10)">+10</button>
+        </div>
+    </div>
+    <div class="input-row">
+        <input type="radio" name="option" value="2">
+        <input type="text" id="textbox2">
+        <div class="buttons-row">
+            <button onclick="increment('textbox2', -10)">-10</button>
+            <button onclick="increment('textbox2', 10)">+10</button>
+        </div>
+    </div>
+    <div class="input-row">
+        <input type="radio" name="option" value="3">
+        <input type="text" id="textbox3">
+        <div class="buttons-row">
+            <button onclick="increment('textbox3', -10)">-10</button>
+            <button onclick="increment('textbox3', 10)">+10</button>
+        </div>
+    </div>
+</div>
+
+<div class="action-buttons">
+    <button onclick="handleAction('arrived')">arrived</button>
+    <button onclick="handleAction('rooming')">rooming</button>
+    <button onclick="handleAction('ready')">ready</button>
+    <button id="withpt-button" onclick="toggleAction('withpt', 'withpt', 'in', 'out')">withpt</button>
+    <button id="precept-button" onclick="toggleAction('precept', 'precept', 'precepting', 'preceptdone')">precept</button>
+    <button id="charting-button" onclick="toggleAction('charting', 'charting', 'charting', 'chartdone')">charting</button>
+    <button onclick="handleAction('comment')">comment</button>
+</div>
+
+<input type="text" id="comment-box" class="comment-box">
+
+<table>
+    <thead>
+        <tr>
+            <th>visittime</th>
+            <th>eventtime</th>
+            <th>eventtxt</th>
+            <th>comment</th>
+        </tr>
+    </thead>
+    <tbody id="events-table-body">
+        <!-- Rows will be added here -->
+    </tbody>
+</table>
+
+<script>
+function increment(textboxId, value) {
+    let textbox = document.getElementById(textboxId);
+    let currentValue = parseInt(textbox.value) || 0;
+
+    // Get the first two digits and last two digits
+    let lastTwoDigits = currentValue % 100;
+    let firstTwoDigits = Math.floor(currentValue / 100);
+
+    // Update the last two digits with the provided value
+    lastTwoDigits += value;
+
+    // Adjust if the last two digits exceed 60
+    if (lastTwoDigits >= 60) {
+        lastTwoDigits -= 60;
+        firstTwoDigits += 1;
+    } else {
+        lastTwoDigits += 60;
+        firstTwoDigits -= 1;
+    }
+
+    // Combine the parts back together
+    textbox.value = (firstTwoDigits * 100 + lastTwoDigits).toString().padStart(4, '0');
+}
+
+
+    function handleAction(action) {
+        let selectedRadio = document.querySelector('input[type="radio"]:checked');
+        if (selectedRadio) {
+            let textbox = selectedRadio.nextElementSibling;
+            let visittime = textbox.value;
+            let now = new Date();
+            let eventtime = ("0" + now.getHours()).slice(-2) + ("0" + now.getMinutes()).slice(-2);
+            let comment = document.getElementById('comment-box').value;
+
+            addTableRow(visittime, eventtime, action, comment);
+        } else {
+            alert('Please select a radio button.');
+        }
+    }
+
+    function toggleAction(buttonId, activeText, activeEvent, inactiveEvent) {
+        let button = document.getElementById(buttonId + '-button');
+        let action, eventtxt;
+
+        if (button.classList.contains('toggle-active')) {
+            button.classList.remove('toggle-active');
+            button.textContent = buttonId;
+            eventtxt = inactiveEvent;
+        } else {
+            button.classList.add('toggle-active');
+            button.textContent = activeText;
+            eventtxt = activeEvent;
+        }
+
+        let selectedRadio = document.querySelector('input[type="radio"]:checked');
+        if (selectedRadio) {
+            let textbox = selectedRadio.nextElementSibling;
+            let visittime = textbox.value;
+            let now = new Date();
+            let eventtime = ("0" + now.getHours()).slice(-2) + ("0" + now.getMinutes()).slice(-2);
+            let comment = document.getElementById('comment-box').value;
+
+            addTableRow(visittime, eventtime, eventtxt, comment);
+        } else {
+            alert('Please select a radio button.');
+        }
+    }
+
+    function addTableRow(visittime, eventtime, eventtxt, comment) {
+        let tableBody = document.getElementById('events-table-body');
+        let newRow = document.createElement('tr');
+
+        let visittimeCell = document.createElement('td');
+        visittimeCell.textContent = visittime;
+        newRow.appendChild(visittimeCell);
+
+        let eventtimeCell = document.createElement('td');
+        eventtimeCell.textContent = eventtime;
+        newRow.appendChild(eventtimeCell);
+
+        let eventtxtCell = document.createElement('td');
+        eventtxtCell.textContent = eventtxt;
+        newRow.appendChild(eventtxtCell);
+
+        let commentCell = document.createElement('td');
+        commentCell.textContent = comment;
+        newRow.appendChild(commentCell);
+
+        // Add new row to the top of the table
+        tableBody.insertBefore(newRow, tableBody.firstChild);
+    }
+</script>
+
+</body>
+</html>
