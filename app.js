@@ -10,12 +10,13 @@ request.onerror = (event) => {
 
 request.onupgradeneeded = (event) => {
   db = event.target.result;
-  db.createObjectStore('times', { autoIncrement: true });
+  db.createObjectStore('times', { keyPath: 'id', autoIncrement: true });
 };
 
 request.onsuccess = (event) => {
   db = event.target.result;
   console.log('DB ready');
+  displayTable(); // Show initial contents
 };
 
 // =====================
@@ -23,20 +24,69 @@ request.onsuccess = (event) => {
 // =====================
 const timeBox = document.getElementById('timeBox');
 
+let currentID = null; // Track last inserted/edited ID
+
 timeBox.addEventListener('focus', () => {
   const now = new Date();
-  const formattedTime = now.toLocaleString(); // e.g., "1/23/2026, 11:30:15 AM"
+  const formattedTime = now.toLocaleString();
   timeBox.value = formattedTime;
 
-  // Store in IndexedDB
+  // Add new entry to DB
   const transaction = db.transaction(['times'], 'readwrite');
   const store = transaction.objectStore('times');
-  store.add({ time: formattedTime, timestamp: now.getTime() });
-
-  transaction.oncomplete = () => {
-    console.log('Time saved:', formattedTime);
+  const requestAdd = store.add({ time: formattedTime });
+  
+  requestAdd.onsuccess = (event) => {
+    currentID = event.target.result; // store ID for potential edits
+    displayTable();
   };
 });
+
+timeBox.addEventListener('blur', () => {
+  if (currentID === null) return; // nothing to update
+  const newTime = timeBox.value;
+
+  const transaction = db.transaction(['times'], 'readwrite');
+  const store = transaction.objectStore('times');
+  const getRequest = store.get(currentID);
+
+  getRequest.onsuccess = () => {
+    const data = getRequest.result;
+    if (!data) return;
+
+    // Only update if value changed
+    if (data.time !== newTime) {
+      data.time = newTime;
+      const updateRequest = store.put(data);
+      updateRequest.onsuccess = () => {
+        console.log('Time updated:', newTime);
+        displayTable();
+      };
+    }
+  };
+});
+
+// =====================
+// Display table of DB contents
+// =====================
+function displayTable() {
+  const tableBody = document.querySelector('#timeTable tbody');
+  tableBody.innerHTML = '';
+
+  const transaction = db.transaction(['times'], 'readonly');
+  const store = transaction.objectStore('times');
+  const requestAll = store.openCursor();
+
+  requestAll.onsuccess = (event) => {
+    const cursor = event.target.result;
+    if (cursor) {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${cursor.value.id}</td><td>${cursor.value.time}</td>`;
+      tableBody.appendChild(row);
+      cursor.continue();
+    }
+  };
+}
 
 // =====================
 // Service worker registration
