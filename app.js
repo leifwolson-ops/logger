@@ -16,7 +16,7 @@ request.onupgradeneeded = (event) => {
 request.onsuccess = (event) => {
   db = event.target.result;
   console.log('DB ready');
-  displayTable(); // Show initial contents
+  displayTable();
 };
 
 // =====================
@@ -30,10 +30,10 @@ function formatDate(date) {
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-// Fill textbox with current time on focus (replace "arrived")
+// Fill textbox with current time on focus (always)
 timeBox.addEventListener('focus', () => {
   const now = new Date();
-  timeBox.value = formatDate(now);
+  timeBox.value = formatDate(now); // update to current time
 });
 
 // Save new or updated time on blur
