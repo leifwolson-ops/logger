@@ -99,5 +99,36 @@
 
 </div>
 
+  <script>
+  let apptfocus = "";
+
+  // attach handler to all radio buttons
+  document.querySelectorAll('.row input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const row = radio.closest('.row');
+      const textbox = row.querySelector('input[type="text"]');
+
+      if (!textbox.value) {
+        // empty: let user type
+        textbox.focus();
+
+        // when they finish typing, update apptfocus
+        const onBlur = () => {
+          apptfocus = textbox.value;
+          console.log("apptfocus set to:", apptfocus);
+          textbox.removeEventListener('blur', onBlur);
+        };
+
+        textbox.addEventListener('blur', onBlur);
+
+      } else {
+        // already has value: just update apptfocus
+        apptfocus = textbox.value;
+        console.log("apptfocus set to:", apptfocus);
+      }
+    });
+  });
+</script>
+
 </body>
 </html>
