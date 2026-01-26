@@ -112,13 +112,13 @@
         // empty: let user type
         textbox.focus();
 
-        // when they finish typing, update apptfocus
-        const onBlur = () => {
-          apptfocus = textbox.value;
-          console.log("apptfocus set to:", apptfocus);
-          textbox.removeEventListener('blur', onBlur);
-        };
-
+      const onBlur = () => {
+        radio.checked = true;
+        apptfocus = textbox.value;
+        console.log("apptfocus set to:", apptfocus);
+        textbox.removeEventListener('blur', onBlur);
+      };
+        
         textbox.addEventListener('blur', onBlur);
 
       } else {
