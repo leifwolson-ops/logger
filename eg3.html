@@ -99,33 +99,34 @@
 
 </div>
 
-  <script>
+<script>
   let apptfocus = "";
 
-  // attach handler to all radio buttons
-  document.querySelectorAll('.row input[type="radio"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      const row = radio.closest('.row');
-      const textbox = row.querySelector('input[type="text"]');
+  document.querySelectorAll('.row').forEach(row => {
+    const radio = row.querySelector('input[type="radio"]');
+    const textbox = row.querySelector('input[type="text"]');
 
+    // When radio is selected
+    radio.addEventListener('change', () => {
       if (!textbox.value) {
         // empty: let user type
         textbox.focus();
-
-      const onBlur = () => {
-        radio.checked = true;
-        apptfocus = textbox.value;
-        console.log("apptfocus set to:", apptfocus);
-        textbox.removeEventListener('blur', onBlur);
-      };
-        
-        textbox.addEventListener('blur', onBlur);
-
       } else {
-        // already has value: just update apptfocus
+        // already has value: update apptfocus
         apptfocus = textbox.value;
         console.log("apptfocus set to:", apptfocus);
       }
+    });
+
+    // When textbox gets focus, select radio
+    textbox.addEventListener('focus', () => {
+      radio.checked = true;
+    });
+
+    // When user finishes editing textbox, update apptfocus
+    textbox.addEventListener('blur', () => {
+      apptfocus = textbox.value;
+      console.log("apptfocus set to:", apptfocus);
     });
   });
 </script>
