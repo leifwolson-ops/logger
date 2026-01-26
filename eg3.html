@@ -96,6 +96,7 @@
   <div class="main-area">
     <p>placeholder</p>
     <button id="logBtn">Log Time</button>
+    <input id="logOutput" type="text" readonly style="margin-left:10px; width:140px;">
     <p id="status"></p>
   </div>
 
@@ -104,48 +105,97 @@
 <script>
   let apptfocus = "";
 
+  /* ---------------------------
+     ROW / RADIO / TEXTBOX LOGIC
+  ----------------------------*/
   document.querySelectorAll('.row').forEach(row => {
     const radio = row.querySelector('input[type="radio"]');
     const textbox = row.querySelector('input[type="text"]');
 
-    // When radio is selected
     radio.addEventListener('change', () => {
       if (!textbox.value) {
-        // empty: let user type
         textbox.focus();
       } else {
-        // already has value: update apptfocus
         apptfocus = textbox.value;
         console.log("apptfocus set to:", apptfocus);
       }
     });
 
-    // When textbox gets focus, select radio
     textbox.addEventListener('focus', () => {
       radio.checked = true;
     });
 
-    // When user finishes editing textbox, update apptfocus
     textbox.addEventListener('blur', () => {
       apptfocus = textbox.value;
       console.log("apptfocus set to:", apptfocus);
     });
   });
 
-  // log button behavior
+
+  /* ---------------------------
+     INDEXED DB SETUP
+  ----------------------------*/
+  let db;
+
+  const request = indexedDB.open("TimeLogDB", 1);
+
+  request.onupgradeneeded = (event) => {
+    db = event.target.result;
+    const store = db.createObjectStore("logs", {
+      keyPath: "id",
+      autoIncrement: true
+    });
+    store.createIndex("time", "time");
+    store.createIndex("focus", "focus");
+  };
+
+  request.onsuccess = (event) => {
+    db = event.target.result;
+    console.log("DB opened");
+  };
+
+  request.onerror = (event) => {
+    console.error("DB error", event.target.error);
+  };
+
+
+  /* ---------------------------
+     LOG BUTTON
+  ----------------------------*/
   const logBtn = document.getElementById('logBtn');
   const status = document.getElementById('status');
+  const logOutput = document.getElementById('logOutput');
 
   logBtn.addEventListener('click', () => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString();
 
-    console.log("LOG:", {
+    const entry = {
       time: timeStr,
       focus: apptfocus
-    });
+    };
 
-    status.textContent = `Logged ${timeStr} for "${apptfocus}"`;
+    // show in textbox
+    logOutput.value = `${timeStr} | ${apptfocus}`;
+
+    // save to IndexedDB
+    if (!db) {
+      console.error("DB not ready yet");
+      return;
+    }
+
+    const tx = db.transaction("logs", "readwrite");
+    const store = tx.objectStore("logs");
+    store.add(entry);
+
+    tx.oncomplete = () => {
+      console.log("Saved to DB:", entry);
+      status.textContent = `Logged ${timeStr}`;
+    };
+
+    tx.onerror = () => {
+      console.error("Transaction error");
+    };
   });
 </script>
 
