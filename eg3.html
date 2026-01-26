@@ -95,6 +95,8 @@
 
   <div class="main-area">
     <p>placeholder</p>
+    <button id="logBtn">Log Time</button>
+    <p id="status"></p>
   </div>
 
 </div>
@@ -128,6 +130,22 @@
       apptfocus = textbox.value;
       console.log("apptfocus set to:", apptfocus);
     });
+  });
+
+  // log button behavior
+  const logBtn = document.getElementById('logBtn');
+  const status = document.getElementById('status');
+
+  logBtn.addEventListener('click', () => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString();
+
+    console.log("LOG:", {
+      time: timeStr,
+      focus: apptfocus
+    });
+
+    status.textContent = `Logged ${timeStr} for "${apptfocus}"`;
   });
 </script>
 
