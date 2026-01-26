@@ -93,15 +93,16 @@
 
   </div>
 
-  <div class="main-area">
-    <p>placeholder</p>
+<div class="main-area">
+  <p>placeholder</p>
+
+  <div style="margin-bottom:10px;">
     <button id="logBtn">Log Time</button>
     <input id="logOutput" type="text" readonly style="margin-left:10px; width:140px;">
-    <p id="status"></p>
     <button id="openTableBtn" style="margin-left:10px;">Open Table</button>
   </div>
-  
-    <table id="logTable" border="1" cellpadding="5" style="border-collapse:collapse; width:100%;">
+
+  <table id="logTable" border="1" cellpadding="5" style="border-collapse:collapse; width:100%;">
     <thead>
       <tr>
         <th>ID</th>
@@ -109,11 +110,8 @@
         <th>Focus</th>
       </tr>
     </thead>
-    <tbody>
-      <!-- rows added by JS -->
-    </tbody>
+    <tbody></tbody>
   </table>
-
 </div>
 
 <script>
