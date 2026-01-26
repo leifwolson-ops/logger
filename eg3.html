@@ -99,6 +99,19 @@
     <input id="logOutput" type="text" readonly style="margin-left:10px; width:140px;">
     <p id="status"></p>
   </div>
+  
+    <table id="logTable" border="1" cellpadding="5" style="border-collapse:collapse; width:100%;">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Time</th>
+        <th>Focus</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- rows added by JS -->
+    </tbody>
+  </table>
 
 </div>
 
@@ -152,6 +165,7 @@
   request.onsuccess = (event) => {
     db = event.target.result;
     console.log("DB opened");
+    loadTable(); // load existing data
   };
 
   request.onerror = (event) => {
@@ -160,10 +174,42 @@
 
 
   /* ---------------------------
+     TABLE FUNCTIONS
+  ----------------------------*/
+  const tableBody = document.querySelector("#logTable tbody");
+
+  function addRowToTable(entry) {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${entry.id}</td>
+      <td>${entry.time}</td>
+      <td>${entry.focus}</td>
+    `;
+
+    tableBody.appendChild(tr);
+  }
+
+  function loadTable() {
+    tableBody.innerHTML = "";
+
+    const tx = db.transaction("logs", "readonly");
+    const store = tx.objectStore("logs");
+
+    store.openCursor().onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        addRowToTable(cursor.value);
+        cursor.continue();
+      }
+    };
+  }
+
+
+  /* ---------------------------
      LOG BUTTON
   ----------------------------*/
   const logBtn = document.getElementById('logBtn');
-  const status = document.getElementById('status');
   const logOutput = document.getElementById('logOutput');
 
   logBtn.addEventListener('click', () => {
@@ -175,10 +221,8 @@
       focus: apptfocus
     };
 
-    // show in textbox
     logOutput.value = `${timeStr} | ${apptfocus}`;
 
-    // save to IndexedDB
     if (!db) {
       console.error("DB not ready yet");
       return;
@@ -186,15 +230,16 @@
 
     const tx = db.transaction("logs", "readwrite");
     const store = tx.objectStore("logs");
-    store.add(entry);
+    const addReq = store.add(entry);
 
-    tx.oncomplete = () => {
-      console.log("Saved to DB:", entry);
-      status.textContent = `Logged ${timeStr}`;
+    addReq.onsuccess = (e) => {
+      entry.id = e.target.result; // auto id from DB
+      addRowToTable(entry);        // update table immediately
+      console.log("Saved:", entry);
     };
 
-    tx.onerror = () => {
-      console.error("Transaction error");
+    addReq.onerror = () => {
+      console.error("Add failed");
     };
   });
 </script>
