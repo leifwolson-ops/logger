@@ -214,19 +214,30 @@ logBtn.addEventListener("click", async () => {
   const now = new Date().toLocaleTimeString();
   logOutput.value = now;
 
+  const existing = await getRecordByFocus(apptfocus);
+
   const tx = db.transaction("logs", "readwrite");
   const store = tx.objectStore("logs");
 
-  const existing = await getRecordByFocus(apptfocus);
+  let writeReq;
 
   if (existing) {
     existing.time = now;
-    store.put(existing);
+    writeReq = store.put(existing);
   } else {
-    store.add({ focus: apptfocus, time: now });
+    writeReq = store.add({
+      focus: apptfocus,
+      time: now
+    });
   }
 
-  tx.oncomplete = loadTable;
+  writeReq.onsuccess = () => {
+    loadTable(); // ✅ guaranteed DB is updated
+  };
+
+  writeReq.onerror = () => {
+    console.error("Failed to write log entry");
+  };
 });
 
 /* ===========================
