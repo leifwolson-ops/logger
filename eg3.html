@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>logger</title>
 
-  <!-- CSS goes here -->
   <style>
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      overflow: hidden; /* prevent whole page from scrolling */
+      overflow: hidden;
       font-family: sans-serif;
     }
 
@@ -20,20 +19,16 @@
       height: 100%;
     }
 
-    /* Left column */
     .control-panel {
       width: 35vw;
       max-width: 320px;
-    
       border-right: 1px solid #ccc;
       padding: 10px;
       box-sizing: border-box;
-    
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
 
-    /* Each radio + textbox row */
     .row {
       display: flex;
       align-items: center;
@@ -42,16 +37,16 @@
     }
 
     .row input[type="text"] {
-      width: 8ch;          /* about 8 characters wide */
+      width: 8ch;
       padding: 4px;
-      font-size: 16px;    /* prevents iOS zoom */
+      font-size: 16px;
     }
 
-    /* Right side area */
     .main-area {
       flex: 1;
       padding: 10px;
-      overflow: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
   </style>
 </head>
@@ -61,280 +56,221 @@
 <div class="app">
 
   <div class="control-panel">
-
     <!-- 25 rows -->
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 1"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 2"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 3"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 4"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 5"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 6"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 7"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 8"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 9"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 10"></div>
-
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 11"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 12"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 13"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 14"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 15"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 16"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 17"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 18"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 19"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 20"></div>
-
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 21"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 22"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 23"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 24"></div>
-    <div class="row"><input type="radio" name="slot"><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label 25"></div>
-
+    <script>
+      for (let i = 1; i <= 25; i++) {
+        document.write(`
+          <div class="row">
+            <input type="radio" name="slot">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Label ${i}">
+          </div>
+        `);
+      }
+    </script>
   </div>
 
-<div class="main-area">
-  <p>placeholder</p>
+  <div class="main-area">
+    <div style="margin-bottom:10px;">
+      <button id="logBtn">Log Time</button>
+      <input id="logOutput" type="text" readonly style="margin-left:10px; width:140px;">
+      <button id="openTableBtn" style="margin-left:10px;">Open Table</button>
+    </div>
 
-  <div style="margin-bottom:10px;">
-    <button id="logBtn">Log Time</button>
-    <input id="logOutput" type="text" readonly style="margin-left:10px; width:140px;">
-    <button id="openTableBtn" style="margin-left:10px;">Open Table</button>
+    <table id="logTable" border="1" cellpadding="5" style="border-collapse:collapse; width:100%;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Time</th>
+          <th>Focus</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
-  <table id="logTable" border="1" cellpadding="5" style="border-collapse:collapse; width:100%;">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Time</th>
-        <th>Focus</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
 </div>
 
 <script>
-  let apptfocus = "";
+/* ===========================
+   GLOBAL STATE
+=========================== */
+let apptfocus = "";
+let db;
 
-  /* ---------------------------
-     ROW / RADIO / TEXTBOX LOGIC
-  ----------------------------*/
-  document.querySelectorAll('.row').forEach(row => {
-    const radio = row.querySelector('input[type="radio"]');
-    const textbox = row.querySelector('input[type="text"]');
+/* ===========================
+   ROW / RADIO / TEXTBOX LOGIC
+=========================== */
+document.querySelectorAll('.row').forEach(row => {
+  const radio = row.querySelector('input[type="radio"]');
+  const textbox = row.querySelector('input[type="text"]');
 
-    radio.addEventListener('change', () => {
-      if (!textbox.value) {
-        textbox.focus();
-      } else {
-        apptfocus = textbox.value;
-        console.log("apptfocus set to:", apptfocus);
-        updateLogOutputForFocus();
-      }
-    });
-
-    textbox.addEventListener('focus', () => {
-      radio.checked = true;
-    });
-
-    textbox.addEventListener('blur', () => {
+  radio.addEventListener('change', () => {
+    if (!textbox.value) {
+      textbox.focus();
+    } else {
       apptfocus = textbox.value;
-      console.log("apptfocus set to:", apptfocus);
       updateLogOutputForFocus();
-    });
+    }
   });
 
+  textbox.addEventListener('focus', () => {
+    radio.checked = true;
+  });
 
-  /* ---------------------------
-     INDEXED DB SETUP
-  ----------------------------*/
-  let db;
+  textbox.addEventListener('blur', () => {
+    apptfocus = textbox.value;
+    updateLogOutputForFocus();
+  });
+});
 
-  const request = indexedDB.open("TimeLogDB", 1);
+/* ===========================
+   INDEXED DB SETUP
+=========================== */
+const request = indexedDB.open("TimeLogDB", 1);
 
-  request.onupgradeneeded = (event) => {
-    db = event.target.result;
-    const store = db.createObjectStore("logs", {
-      keyPath: "id",
-      autoIncrement: true
-    });
-    store.createIndex("time", "time");
-    store.createIndex("focus", "focus");
-  };
+request.onupgradeneeded = e => {
+  db = e.target.result;
+  const store = db.createObjectStore("logs", {
+    keyPath: "id",
+    autoIncrement: true
+  });
+  store.createIndex("focus", "focus", { unique: true });
+};
 
-  request.onsuccess = (event) => {
-    db = event.target.result;
-    console.log("DB opened");
-    loadTable(); // load existing data
-  };
+request.onsuccess = e => {
+  db = e.target.result;
+  loadTable();
+};
 
-  request.onerror = (event) => {
-    console.error("DB error", event.target.error);
-  };
+request.onerror = e => {
+  console.error("DB error", e.target.error);
+};
 
-
-  /* ---------------------------
-     TABLE FUNCTIONS
-  ----------------------------*/
-  const tableBody = document.querySelector("#logTable tbody");
-
-  function addRowToTable(entry) {
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${entry.id}</td>
-      <td>${entry.time}</td>
-      <td>${entry.focus}</td>
-    `;
-
-    tableBody.appendChild(tr);
-  }
-
-  function loadTable() {
-    tableBody.innerHTML = "";
-
+/* ===========================
+   DB HELPERS
+=========================== */
+function getRecordByFocus(focus) {
+  return new Promise(resolve => {
     const tx = db.transaction("logs", "readonly");
     const store = tx.objectStore("logs");
+    const index = store.index("focus");
 
-    store.openCursor().onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
-        addRowToTable(cursor.value);
-        cursor.continue();
-      }
-    };
-  }
-
-function getRecordByFocus(db, focus) {
-  return new Promise((resolve) => {
-    const tx = db.transaction('logs', 'readonly');
-    const store = tx.objectStore('logs');
-
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const match = request.result.find(r => r.focus === focus);
-      resolve(match || null);
-    };
+    const req = index.get(focus);
+    req.onsuccess = () => resolve(req.result || null);
   });
 }
 
+/* ===========================
+   TABLE FUNCTIONS
+=========================== */
+const tableBody = document.querySelector("#logTable tbody");
+
+function loadTable() {
+  tableBody.innerHTML = "";
+  const tx = db.transaction("logs", "readonly");
+  const store = tx.objectStore("logs");
+
+  store.openCursor().onsuccess = e => {
+    const cursor = e.target.result;
+    if (cursor) {
+      const r = cursor.value;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.id}</td>
+        <td>${r.time}</td>
+        <td>${r.focus}</td>
+      `;
+      tableBody.appendChild(tr);
+      cursor.continue();
+    }
+  };
+}
+
+/* ===========================
+   UPDATE OUTPUT FOR FOCUS
+=========================== */
 async function updateLogOutputForFocus() {
-  if (!apptfocus) {
-    logOutput.value = '';
+  if (!apptfocus || !db) {
+    logOutput.value = "";
     return;
   }
 
-  const db = await dbPromise;
-  const record = await getRecordByFocus(db, apptfocus);
-
-  logOutput.value = record ? record.time : '';
+  const record = await getRecordByFocus(apptfocus);
+  logOutput.value = record ? record.time : "";
 }
 
-  /* ---------------------------
-     LOG BUTTON
-  ----------------------------*/
-  const logBtn = document.getElementById('logBtn');
-  const logOutput = document.getElementById('logOutput');
+/* ===========================
+   LOG BUTTON
+=========================== */
+const logBtn = document.getElementById("logBtn");
+const logOutput = document.getElementById("logOutput");
 
-logBtn.addEventListener('click', async () => {
+logBtn.addEventListener("click", async () => {
   if (!apptfocus) {
-    alert('Select or enter a focus first');
+    alert("Select or enter a focus first");
     return;
   }
 
   const now = new Date().toLocaleTimeString();
   logOutput.value = now;
 
-  const db = await dbPromise;
+  const tx = db.transaction("logs", "readwrite");
+  const store = tx.objectStore("logs");
 
-  const existing = await getRecordByFocus(db, apptfocus);
-
-  const tx = db.transaction('logs', 'readwrite');
-  const store = tx.objectStore('logs');
+  const existing = await getRecordByFocus(apptfocus);
 
   if (existing) {
-    // update existing record
     existing.time = now;
     store.put(existing);
   } else {
-    // create new record
-    store.add({
-      time: now,
-      focus: apptfocus
-    });
+    store.add({ focus: apptfocus, time: now });
   }
 
-  tx.oncomplete = refreshTable;
+  tx.oncomplete = loadTable;
 });
 
-  /* ---------------------------
+/* ===========================
    OPEN TABLE IN NEW WINDOW
-----------------------------*/
-const openTableBtn = document.getElementById("openTableBtn");
-
-openTableBtn.addEventListener("click", () => {
-  if (!db) {
-    alert("Database not ready yet");
-    return;
-  }
+=========================== */
+document.getElementById("openTableBtn").addEventListener("click", () => {
+  const rows = [];
 
   const tx = db.transaction("logs", "readonly");
   const store = tx.objectStore("logs");
 
-  const rows = [];
-
-  store.openCursor().onsuccess = (event) => {
-    const cursor = event.target.result;
+  store.openCursor().onsuccess = e => {
+    const cursor = e.target.result;
     if (cursor) {
       rows.push(cursor.value);
       cursor.continue();
     } else {
-      // all rows collected → open window
-      openTableWindow(rows);
+      const win = window.open("", "_blank");
+      win.document.write(`
+        <html>
+        <head>
+          <title>Time Log</title>
+          <style>
+            body { font-family: sans-serif; padding: 10px; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #999; padding: 6px; }
+            th { background: #eee; }
+          </style>
+        </head>
+        <body>
+          <h2>Time Log</h2>
+          <table>
+            <tr><th>ID</th><th>Time</th><th>Focus</th></tr>
+            ${rows.map(r =>
+              `<tr><td>${r.id}</td><td>${r.time}</td><td>${r.focus}</td></tr>`
+            ).join("")}
+          </table>
+        </body>
+        </html>
+      `);
+      win.document.close();
     }
   };
 });
-
-
-function openTableWindow(rows) {
-  const win = window.open("", "_blank");
-
-  let html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Time Log Table</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body { font-family: sans-serif; padding: 10px; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #999; padding: 6px; text-align: left; }
-        th { background: #eee; }
-      </style>
-    </head>
-    <body>
-      <h2>Time Log</h2>
-      <table>
-        <tr><th>ID</th><th>Time</th><th>Focus</th></tr>
-  `;
-
-  rows.forEach(r => {
-    html += `<tr><td>${r.id}</td><td>${r.time}</td><td>${r.focus}</td></tr>`;
-  });
-
-  html += `
-      </table>
-    </body>
-    </html>
-  `;
-
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-}
-
 </script>
 
 </body>
