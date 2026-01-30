@@ -130,6 +130,7 @@
       } else {
         apptfocus = textbox.value;
         console.log("apptfocus set to:", apptfocus);
+        updateLogOutputForFocus();
       }
     });
 
@@ -140,6 +141,7 @@
     textbox.addEventListener('blur', () => {
       apptfocus = textbox.value;
       console.log("apptfocus set to:", apptfocus);
+      updateLogOutputForFocus();
     });
   });
 
@@ -204,6 +206,31 @@
     };
   }
 
+function getRecordByFocus(db, focus) {
+  return new Promise((resolve) => {
+    const tx = db.transaction('logs', 'readonly');
+    const store = tx.objectStore('logs');
+
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      const match = request.result.find(r => r.focus === focus);
+      resolve(match || null);
+    };
+  });
+}
+
+async function updateLogOutputForFocus() {
+  if (!apptfocus) {
+    logOutput.value = '';
+    return;
+  }
+
+  const db = await dbPromise;
+  const record = await getRecordByFocus(db, apptfocus);
+
+  logOutput.value = record ? record.time : '';
+}
 
   /* ---------------------------
      LOG BUTTON
@@ -211,36 +238,36 @@
   const logBtn = document.getElementById('logBtn');
   const logOutput = document.getElementById('logOutput');
 
-  logBtn.addEventListener('click', () => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString();
+logBtn.addEventListener('click', async () => {
+  if (!apptfocus) {
+    alert('Select or enter a focus first');
+    return;
+  }
 
-    const entry = {
-      time: timeStr,
+  const now = new Date().toLocaleTimeString();
+  logOutput.value = now;
+
+  const db = await dbPromise;
+
+  const existing = await getRecordByFocus(db, apptfocus);
+
+  const tx = db.transaction('logs', 'readwrite');
+  const store = tx.objectStore('logs');
+
+  if (existing) {
+    // update existing record
+    existing.time = now;
+    store.put(existing);
+  } else {
+    // create new record
+    store.add({
+      time: now,
       focus: apptfocus
-    };
+    });
+  }
 
-    logOutput.value = `${timeStr} | ${apptfocus}`;
-
-    if (!db) {
-      console.error("DB not ready yet");
-      return;
-    }
-
-    const tx = db.transaction("logs", "readwrite");
-    const store = tx.objectStore("logs");
-    const addReq = store.add(entry);
-
-    addReq.onsuccess = (e) => {
-      entry.id = e.target.result; // auto id from DB
-      addRowToTable(entry);        // update table immediately
-      console.log("Saved:", entry);
-    };
-
-    addReq.onerror = () => {
-      console.error("Add failed");
-    };
-  });
+  tx.oncomplete = refreshTable;
+});
 
   /* ---------------------------
    OPEN TABLE IN NEW WINDOW
