@@ -72,7 +72,7 @@
   <div class="main-area">
     <div style="margin-bottom:10px;">
       <button id="logBtn">Log Time</button>
-      <input id="logOutput" type="text" readonly style="margin-left:10px; width:140px;">
+      <input id="logOutput" type="text" style="margin-left:10px; width:140px;">
       <button id="openTableBtn" style="margin-left:10px;">Open Table</button>
     </div>
 
@@ -237,6 +237,32 @@ logBtn.addEventListener("click", async () => {
 
   writeReq.onerror = () => {
     console.error("Failed to write log entry");
+  };
+});
+
+  
+  logOutput.addEventListener("blur", async () => {
+  if (!apptfocus || !db) return;
+
+  const newTime = logOutput.value.trim();
+  if (!newTime) return;
+
+  const existing = await getRecordByFocus(apptfocus);
+  if (!existing) return;
+
+  const tx = db.transaction("logs", "readwrite");
+  const store = tx.objectStore("logs");
+
+  existing.time = newTime;
+  const req = store.put(existing);
+
+  req.onsuccess = () => {
+    loadTable(); // reflect edit immediately
+    console.log("Time updated for focus:", apptfocus);
+  };
+
+  req.onerror = () => {
+    console.error("Failed to update time");
   };
 });
 
