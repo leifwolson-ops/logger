@@ -80,6 +80,7 @@
       <thead>
         <tr>
           <th>ID</th>
+          <th>Raw</th>
           <th>Time</th>
           <th>Focus</th>
         </tr>
@@ -177,7 +178,8 @@ function loadTable() {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${r.id}</td>
-        <td>${r.time}</td>
+        <td>${r.rawText ?? ""}</td>
+        <td>${r.time ?? ""}</td>
         <td>${r.focus}</td>
       `;
       tableBody.appendChild(tr);
@@ -214,25 +216,35 @@ logBtn.addEventListener("click", async () => {
   const now = new Date().toLocaleTimeString();
   logOutput.value = now;
 
+  const rawText = now;
+  const parsedTime = now; // already in DB format
+
   const existing = await getRecordByFocus(apptfocus);
 
   const tx = db.transaction("logs", "readwrite");
   const store = tx.objectStore("logs");
 
-  let writeReq;
+  let req;
 
   if (existing) {
-    existing.time = now;
-    writeReq = store.put(existing);
+    existing.rawText = rawText;
+    existing.time = parsedTime;
+    req = store.put(existing);
   } else {
-    writeReq = store.add({
+    req = store.add({
       focus: apptfocus,
-      time: now
+      rawText,
+      time: parsedTime
     });
   }
 
+  req.onsuccess = loadTable;
+});
+
+  
+
   writeReq.onsuccess = () => {
-    loadTable(); // ✅ guaranteed DB is updated
+    loadTable(); // guaranteed DB is updated
   };
 
   writeReq.onerror = () => {
@@ -241,11 +253,16 @@ logBtn.addEventListener("click", async () => {
 });
 
   
-  logOutput.addEventListener("blur", async () => {
+logOutput.addEventListener("blur", async () => {
   if (!apptfocus || !db) return;
 
-  const newTime = logOutput.value.trim();
-  if (!newTime) return;
+  const rawText = logOutput.value;
+
+  // Try to convert — may or may not succeed
+  const converted = convertTypedTime(rawText, rawText);
+
+  // If conversion failed, store null for time
+  const parsedTime = (converted === rawText) ? null : converted;
 
   const existing = await getRecordByFocus(apptfocus);
   if (!existing) return;
@@ -253,19 +270,54 @@ logBtn.addEventListener("click", async () => {
   const tx = db.transaction("logs", "readwrite");
   const store = tx.objectStore("logs");
 
-  existing.time = newTime;
+  existing.rawText = rawText;
+  existing.time = parsedTime;
+
   const req = store.put(existing);
 
   req.onsuccess = () => {
-    loadTable(); // reflect edit immediately
-    console.log("Time updated for focus:", apptfocus);
+    loadTable();
+    console.log("Updated record:", existing);
   };
 
   req.onerror = () => {
-    console.error("Failed to update time");
+    console.error("Failed to update record");
   };
 });
 
+
+
+  function convertTypedTime(inputText, existingText) {
+  const text = inputText.trim();
+
+  if (!/^\d{3,4}$/.test(text)) return existingText;
+
+  const num = Number(text);
+  if (num < 0 || num > 2359) return existingText;
+
+  let hour, minute;
+
+  if (text.length === 3) {
+    hour = Number(text[0]);
+    minute = Number(text.slice(1));
+  } else {
+    hour = Number(text.slice(0, 2));
+    minute = Number(text.slice(2));
+  }
+
+  if (minute < 0 || minute > 59) return existingText;
+
+  const isAM = hour >= 7 && hour <= 11;
+  let period = isAM ? "AM" : "PM";
+
+  if (hour === 0) hour = 12;
+  else if (hour > 12) hour -= 12;
+
+  return `${hour}:${minute.toString().padStart(2, "0")} ${period}`;
+}
+
+
+  
 /* ===========================
    OPEN TABLE IN NEW WINDOW
 =========================== */
