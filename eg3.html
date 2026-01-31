@@ -121,19 +121,24 @@ panel.querySelectorAll(".row").forEach(row => {
 =========================== */
 const req = indexedDB.open("TimeLogDB", 1);
 
-req.onupgradeneeded = e => {
+request.onupgradeneeded = e => {
   db = e.target.result;
 
-  const logs = db.createObjectStore("logs", {
-    keyPath: "id",
-    autoIncrement: true
-  });
-  logs.createIndex("focus", "focus", { unique: true });
+  if (!db.objectStoreNames.contains("logs")) {
+    const logs = db.createObjectStore("logs", {
+      keyPath: "id",
+      autoIncrement: true
+    });
+    logs.createIndex("focus", "focus", { unique: true });
+  }
 
-  db.createObjectStore("focusRows", {
-    keyPath: "rowId"
-  });
+  if (!db.objectStoreNames.contains("focusRows")) {
+    db.createObjectStore("focusRows", {
+      keyPath: "rowId"
+    });
+  }
 };
+
 
 
 req.onsuccess = e => {
