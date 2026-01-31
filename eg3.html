@@ -126,6 +126,7 @@ radio.addEventListener("change", async () => {
     radio.checked = true;
     apptfocus = textbox.value.trim();
     await updateLogOutputForFocus();
+    textbox.select();
   });
 
   textbox.addEventListener("blur", () => {
