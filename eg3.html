@@ -251,6 +251,25 @@ async function updateLogOutputForFocus() {
 =========================== */
 const logOutput = document.getElementById("logOutput");
 
+logOutput.addEventListener("focus", () => {
+  // Step 1: fill with current time if blank
+  if (!logOutput.value.trim()) {
+    const now = new Date();
+    let h = now.getHours();       // 0-23
+    const m = now.getMinutes();   // 0-59
+
+    // Convert to 12-hour format
+    if (h === 0) h = 12;          // midnight -> 12
+    else if (h > 12) h -= 12;     // 13-23 -> 1-11
+
+    // hmm format: hour without leading zero, minutes always 2 digits
+    logOutput.value = `${h}${m.toString().padStart(2, "0")}`;
+  }
+
+  // Step 2: select all text so user can overwrite
+  logOutput.select();
+});
+  
 document.getElementById("BtnArrived").addEventListener("click", async () => {
   if (!apptfocus) return alert("Select a focus first");
 
