@@ -124,20 +124,10 @@ radio.addEventListener("change", async () => {
 
   textbox.addEventListener("focus", () => {
     radio.checked = true;
-  const val = textbox.value.trim();
-  apptfocus = val;
-
-  // Always update the log textbox
-  if (!val) {
-    logOutput.value = "";
-    return;
-  }
-
-  const rec = await getRecordByFocus(apptfocus);
-
-  // If record exists, show rawText; otherwise, clear textbox
-  logOutput.value = rec ? (rec.rawText ?? "") : "";
-});
+    apptfocus = textbox.value.trim();
+    updateLogOutputForFocus();
+    saveFocusRow(row.dataset.rowId, textbox.value);
+  });
 
   textbox.addEventListener("blur", () => {
     apptfocus = textbox.value.trim();
