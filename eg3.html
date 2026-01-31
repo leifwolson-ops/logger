@@ -93,7 +93,7 @@ for (let i = 1; i <= 25; i++) {
   
   row.innerHTML = `
     <input type="radio" name="slot">
-    <input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="appt${i}">
+    <input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="${i}">
   `;
 
   panel.appendChild(row);
@@ -106,14 +106,23 @@ panel.querySelectorAll(".row").forEach(row => {
   const radio = row.querySelector("input[type=radio]");
   const textbox = row.querySelector("input[type=text]");
 
-  radio.addEventListener("change", () => {
-    apptfocus = textbox.value.trim();
-    updateLogOutputForFocus();
-  });
+radio.addEventListener("change", async () => {
+  const val = textbox.value.trim();
+
+  apptfocus = val;
+
+  if (!val) {
+    logOutput.value = "";
+    return;
+  }
+
+  await updateLogOutputForFocus();
+});
 
   textbox.addEventListener("focus", () => {
     radio.checked = true;
     apptfocus = textbox.value.trim();
+    updateLogOutputForFocus();
   });
 
   textbox.addEventListener("blur", () => {
@@ -229,7 +238,7 @@ function loadTable() {
    UPDATE OUTPUT
 =========================== */
 async function updateLogOutputForFocus() {
-  if (!apptfocus) {
+  if (!apptfocus || !db) {
     logOutput.value = "";
     return;
   }
