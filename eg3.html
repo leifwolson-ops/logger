@@ -108,15 +108,18 @@ panel.querySelectorAll(".row").forEach(row => {
 
 radio.addEventListener("change", async () => {
   const val = textbox.value.trim();
-
   apptfocus = val;
 
+  // Always update the log textbox
   if (!val) {
     logOutput.value = "";
     return;
   }
 
-  await updateLogOutputForFocus();
+  const rec = await getRecordByFocus(apptfocus);
+
+  // If record exists, show rawText; otherwise, clear textbox
+  logOutput.value = rec ? (rec.rawText ?? "") : "";
 });
 
   textbox.addEventListener("focus", () => {
@@ -238,14 +241,15 @@ function loadTable() {
    UPDATE OUTPUT
 =========================== */
 async function updateLogOutputForFocus() {
-  if (!apptfocus) return;
+  if (!apptfocus) {
+    logOutput.value = "";
+    return;
+  }
 
   const rec = await getRecordByFocus(apptfocus);
-  if (rec) {
     logOutput.value = rec.rawText ?? "";
   }
-  // else do nothing — leave textbox as-is
-}
+
 
 /* ===========================
    LOG BUTTON
