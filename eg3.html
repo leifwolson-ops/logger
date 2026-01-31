@@ -47,17 +47,16 @@ html, body {
   <div class="control-panel" id="panel"></div>
 
   <div class="main-area">
-    <button id="logBtn">Log Time</button>
+    <button id="BtnArrived">arrived</button>
     <input id="logOutput" type="text" style="margin-left:10px;width:140px;">
-    <button id="openTableBtn">Open Table</button>
 
     <table id="logTable" border="1" cellpadding="5" style="margin-top:10px;width:100%;">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Raw</th>
-          <th>Time</th>
-          <th>Focus</th>
+          <th>index</th>
+          <th>user input</th>
+          <th>timestamp</th>
+          <th>appt time</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -234,7 +233,7 @@ async function updateLogOutputForFocus() {
 =========================== */
 const logOutput = document.getElementById("logOutput");
 
-document.getElementById("logBtn").addEventListener("click", async () => {
+document.getElementById("BtnArrived").addEventListener("click", async () => {
   if (!apptfocus) return alert("Select a focus first");
 
   const now = new Date().toLocaleTimeString();
