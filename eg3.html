@@ -217,9 +217,9 @@ function loadTable() {
     tbody.innerHTML += `
       <tr>
         <td>${r.id}</td>
+        <td>${r.focus}</td>        
         <td>${r.rawText ?? ""}</td>
         <td>${r.time ?? ""}</td>
-        <td>${r.focus}</td>
       </tr>`;
     c.continue();
   };
