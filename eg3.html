@@ -125,12 +125,13 @@ radio.addEventListener("change", async () => {
   textbox.addEventListener("focus", () => {
     radio.checked = true;
     apptfocus = textbox.value.trim();
+    updateLogOutputForFocus();
+    saveFocusRow(row.dataset.rowId, textbox.value);
   });
 
   textbox.addEventListener("blur", () => {
     apptfocus = textbox.value.trim();
     updateLogOutputForFocus();
-
     saveFocusRow(row.dataset.rowId, textbox.value);
   });
 });
