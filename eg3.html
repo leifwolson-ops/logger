@@ -93,7 +93,7 @@ for (let i = 1; i <= 25; i++) {
   
   row.innerHTML = `
     <input type="radio" name="slot">
-    <input type="text" placeholder="appt${i}">
+    <input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="appt${i}">
   `;
 
   panel.appendChild(row);
