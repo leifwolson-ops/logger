@@ -238,12 +238,13 @@ function loadTable() {
    UPDATE OUTPUT
 =========================== */
 async function updateLogOutputForFocus() {
-  if (!apptfocus || !db) {
-    logOutput.value = "";
-    return;
-  }
+  if (!apptfocus) return;
+
   const rec = await getRecordByFocus(apptfocus);
-  logOutput.value = rec?.rawText ?? "";
+  if (rec) {
+    logOutput.value = rec.rawText ?? "";
+  }
+  // else do nothing — leave textbox as-is
 }
 
 /* ===========================
