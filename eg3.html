@@ -46,6 +46,17 @@ html, body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+.main-area label {
+  display: inline-block;
+  width: 50px;
+  margin-top: 6px;
+}
+
+.main-area input[type="text"] {
+  margin-bottom: 8px;
+}
+
 </style>
 </head>
 
@@ -56,14 +67,21 @@ html, body {
   <div class="control-panel" id="panel"></div>
 
   <div class="main-area">
-    <span style="font-weight:600;">arrived</span>
+    <label>arrived</label>
     <input id="logOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+
+    <label>in</label>
+    <input id="inOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+
+    <label>out</label>
+    <input id="outOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
 
     <table id="logTable" border="1" cellpadding="5" style="margin-top:10px;width:100%;">
       <thead>
         <tr>
           <th>index</th>
-          <th>appt time</th>          
+          <th>appt time</th>         
+          <th>event</th>    
           <th>user input</th>
           <th>timestamp</th>
         </tr>
@@ -82,6 +100,7 @@ html, body {
 let apptfocus = "";
 let db;
 let isEditingLog = false;
+
   
 /* ===========================
    BUILD ROWS
@@ -101,6 +120,14 @@ for (let i = 1; i <= 25; i++) {
   panel.appendChild(row);
 }
 
+  /* ===========================
+   ELEMENT REFERENCES
+=========================== */
+const logOutput = document.getElementById("logOutput");
+const inOutput  = document.getElementById("inOutput");
+const outOutput = document.getElementById("outOutput");
+
+  
 /* ===========================
    ROW LOGIC
 =========================== */
@@ -217,13 +244,81 @@ function restoreFocusRows() {
 
   if (!apptfocus) {
     logOutput.value = "";
+    inOutput.value = "";
+    outOutput.value = "";
     return;
   }
 
   const rec = await getRecordByFocus(apptfocus);
-  logOutput.value = rec ? (rec.rawText ?? "") : "";
+  logOutput.value = rec?.logOutput ?? "";
+  inOutput.value = rec?.inOutput ?? "";
+  outOutput.value = rec?.outOutput ?? "";
 }
 
+
+
+/* ===========================
+   HELPER: SETUP TIME INPUT
+=========================== */
+  function setupTimeInput(inputEl) {
+  inputEl.addEventListener("focus", () => {
+    isEditingLog = true;
+
+    if (!inputEl.value.trim()) {
+      const now = new Date();
+      let h = now.getHours();
+      const m = now.getMinutes();
+
+      h = h % 12 || 12; // 12h format
+      inputEl.value = `${h}${String(m).padStart(2,"0")}`;
+    }
+
+    setTimeout(() => inputEl.select(), 0);
+  });
+
+  inputEl.addEventListener("blur", async () => {
+    if (!apptfocus) {
+      isEditingLog = false;
+      return;
+    }
+
+    const raw = inputEl.value; // empty is valid
+    const parsed = convertTypedTime(raw);
+
+    const rec = await getRecordByFocus(apptfocus);
+    const tx = db.transaction("logs", "readwrite");
+    const store = tx.objectStore("logs");
+
+    if (rec) {
+      // update this specific field
+      rec[inputEl.id] = raw;
+      rec[`${inputEl.id}Time`] = parsed ?? null;
+      store.put(rec);
+    } else {
+      const newRec = { focus: apptfocus };
+      newRec[inputEl.id] = raw;
+      newRec[`${inputEl.id}Time`] = parsed ?? null;
+      store.add(newRec);
+    }
+
+    tx.oncomplete = () => {
+      isEditingLog = false;
+      loadTable();
+    };
+  });
+}
+
+  
+/* ===========================
+   SETUP LOG/IN/OUT INPUTS
+=========================== */
+setupTimeInput(logOutput);
+setupTimeInput(inOutput);
+setupTimeInput(outOutput);
+
+
+
+  
 /* ===========================
    TABLE
 =========================== */
@@ -322,6 +417,7 @@ logOutput.addEventListener("blur", async () => {
 });
 
 
+  
 /* ===========================
    TIME CONVERTER
 =========================== */
@@ -370,7 +466,7 @@ document.getElementById("openTableBtn").addEventListener("click", () => {
   }
 });
 
-  
+
 </script>
 
 </body>
