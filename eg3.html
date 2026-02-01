@@ -121,10 +121,12 @@ textbox.addEventListener("focus", async () => {
 });
 
 
-textbox.addEventListener("blur", () => {
+textbox.addEventListener("blur", e => {
   apptfocus = textbox.value.trim();
-
   saveFocusRow(row.dataset.rowId, textbox.value);
+
+  // If focus is moving to logOutput, do nothing
+  if (e.relatedTarget === logOutput) return;
 
   if (!isEditingLog) {
     updateLogOutputForFocus();
