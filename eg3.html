@@ -120,12 +120,16 @@ textbox.addEventListener("focus", async () => {
 });
 
 
-  textbox.addEventListener("blur", () => {
-    apptfocus = textbox.value.trim();
+textbox.addEventListener("blur", () => {
+  apptfocus = textbox.value.trim();
+
+  saveFocusRow(row.dataset.rowId, textbox.value);
+
+  if (!isEditingLog) {
     updateLogOutputForFocus();
-    saveFocusRow(row.dataset.rowId, textbox.value);
-  });
+  }
 });
+
 
 /* ===========================
    DB SETUP
@@ -308,10 +312,13 @@ document.getElementById("BtnArrived").addEventListener("click", async () => {
    OUTPUT BLUR (EDITABLE)
 =========================== */
 logOutput.addEventListener("blur", async () => {
-  if (!apptfocus) return;
+  if (!apptfocus) {
+    isEditingLog = false;
+    return;
+  }
 
-  const raw = logOutput.value.trim();
-  const parsed = raw ? convertTypedTime(raw) : null;
+  const raw = logOutput.value;           // EMPTY IS VALID
+  const parsed = convertTypedTime(raw);
 
   const rec = await getRecordByFocus(apptfocus);
 
@@ -319,25 +326,23 @@ logOutput.addEventListener("blur", async () => {
   const store = tx.objectStore("logs");
 
   if (rec) {
-    // update existing record
-    rec.rawText = raw;          // may be ""
-    rec.time = parsed;          // null if empty or invalid
+    rec.rawText = raw;
+    rec.time = parsed ?? null;
     store.put(rec);
   } else {
-    // create new record (even if empty)
     store.add({
       focus: apptfocus,
-      rawText: raw,             // ""
-      time: parsed              // null
+      rawText: raw,
+      time: parsed ?? null
     });
   }
 
-tx.oncomplete = () => {
-  isEditingLog = false;
-  loadTable();
-};
-
+  tx.oncomplete = () => {
+    isEditingLog = false;
+    loadTable();
+  };
 });
+
 
 /* ===========================
    TIME CONVERTER
