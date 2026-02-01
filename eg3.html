@@ -107,27 +107,17 @@ panel.querySelectorAll(".row").forEach(row => {
   const textbox = row.querySelector("input[type=text]");
 
 radio.addEventListener("change", async () => {
-  const val = textbox.value.trim();
-  apptfocus = val;
-
-  // Always update the log textbox
-  if (!val) {
-    logOutput.value = "";
-    return;
-  }
-
-  const rec = await getRecordByFocus(apptfocus);
-
-  // If record exists, show rawText; otherwise, clear textbox
-  logOutput.value = rec ? (rec.rawText ?? "") : "";
+  await activateFocus(textbox.value);
 });
 
-  textbox.addEventListener("focus", () => {
-    radio.checked = true;
-    apptfocus = textbox.value.trim();
-    updateLogOutputForFocus();
-    saveFocusRow(row.dataset.rowId, textbox.value);
-  });
+textbox.addEventListener("focus", async () => {
+  radio.checked = true;
+
+  await activateFocus(textbox.value);
+
+  saveFocusRow(row.dataset.rowId, textbox.value);
+});
+
 
   textbox.addEventListener("blur", () => {
     apptfocus = textbox.value.trim();
@@ -212,6 +202,18 @@ function restoreFocusRows() {
 
     cursor.continue();
   };
+}
+
+  async function activateFocus(val) {
+  apptfocus = val.trim();
+
+  if (!apptfocus) {
+    logOutput.value = "";
+    return;
+  }
+
+  const rec = await getRecordByFocus(apptfocus);
+  logOutput.value = rec ? (rec.rawText ?? "") : "";
 }
 
 /* ===========================
