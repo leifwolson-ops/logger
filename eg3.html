@@ -80,7 +80,8 @@ html, body {
 =========================== */
 let apptfocus = "";
 let db;
-
+let isEditingLog = false;
+  
 /* ===========================
    BUILD ROWS
 =========================== */
@@ -243,14 +244,17 @@ function loadTable() {
    UPDATE OUTPUT
 =========================== */
 async function updateLogOutputForFocus() {
+  if (isEditingLog) return;
+
   if (!apptfocus) {
     logOutput.value = "";
     return;
   }
 
   const rec = await getRecordByFocus(apptfocus);
-  logOutput.value = rec.rawText ?? "";
-  }
+  logOutput.value = rec ? (rec.rawText ?? "") : "";
+}
+
 
 
 /* ===========================
@@ -259,23 +263,21 @@ async function updateLogOutputForFocus() {
 const logOutput = document.getElementById("logOutput");
 
 logOutput.addEventListener("focus", () => {
-  // Step 1: fill with current time if blank
+  isEditingLog = true;
+
   if (!logOutput.value.trim()) {
     const now = new Date();
-    let h = now.getHours();       // 0-23
-    const m = now.getMinutes();   // 0-59
+    let h = now.getHours();
+    const m = now.getMinutes();
 
-    // Convert to 12-hour format
-    if (h === 0) h = 12;          // midnight -> 12
-    else if (h > 12) h -= 12;     // 13-23 -> 1-11
-
-    // hmm format: hour without leading zero, minutes always 2 digits
-    logOutput.value = `${h}${m.toString().padStart(2, "0")}`;
+    h = h % 12 || 12; // 12h format
+    logOutput.value = `${h}${String(m).padStart(2, "0")}`;
   }
 
-  // Step 2: select all text so user can overwrite
-  logOutput.select();
+  // select all text
+  setTimeout(() => logOutput.select(), 0);
 });
+
   
 document.getElementById("BtnArrived").addEventListener("click", async () => {
   if (!apptfocus) return alert("Select a focus first");
@@ -330,7 +332,11 @@ logOutput.addEventListener("blur", async () => {
     });
   }
 
-  tx.oncomplete = loadTable;
+tx.oncomplete = () => {
+  isEditingLog = false;
+  loadTable();
+};
+
 });
 
 /* ===========================
