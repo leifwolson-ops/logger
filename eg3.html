@@ -56,14 +56,21 @@ html, body {
   <div class="control-panel" id="panel"></div>
 
   <div class="main-area">
-    <span style="font-weight:600;">arrived</span>
+    <label>arrived</label>
     <input id="logOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+
+    <label>in</label>
+    <input id="inOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+
+    <label>out</label>
+    <input id="outOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
 
     <table id="logTable" border="1" cellpadding="5" style="margin-top:10px;width:100%;">
       <thead>
         <tr>
           <th>index</th>
-          <th>appt time</th>          
+          <th>appt time</th>
+          <th>event</th>   
           <th>user input</th>
           <th>timestamp</th>
         </tr>
