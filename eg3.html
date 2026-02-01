@@ -46,6 +46,14 @@ html, body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+.event-row {
+  display: flex;
+  align-items: center; /* vertically center label + input */
+  gap: 6px;            /* space between label and textbox */
+  margin-bottom: 6px;  /* space between rows */
+}
+
 </style>
 </head>
 
@@ -55,15 +63,21 @@ html, body {
 
   <div class="control-panel" id="panel"></div>
 
-  <div class="main-area">
-    <label>arrived</label>
-    <input id="logOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+<div class="main-area">
+  <div class="event-row">
+    <label for="arrivedOutput">arrived</label>
+    <input id="arrivedOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+  </div>
 
-    <label>in</label>
+  <div class="event-row">
+    <label for="inOutput">in</label>
     <input id="inOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+  </div>
 
-    <label>out</label>
+  <div class="event-row">
+    <label for="outOutput">out</label>
     <input id="outOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+  </div>
 
     <table id="logTable" border="1" cellpadding="5" style="margin-top:10px;width:100%;">
       <thead>
