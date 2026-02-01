@@ -309,25 +309,24 @@ logOutput.addEventListener("blur", async () => {
   if (!apptfocus) return;
 
   const raw = logOutput.value.trim();
-  if (!raw) return; // don’t create empty records
+  const parsed = raw ? convertTypedTime(raw) : null;
 
-  const parsed = convertTypedTime(raw);
   const rec = await getRecordByFocus(apptfocus);
 
   const tx = db.transaction("logs", "readwrite");
   const store = tx.objectStore("logs");
 
   if (rec) {
-    // update existing
-    rec.rawText = raw;
-    if (parsed) rec.time = parsed;
+    // update existing record
+    rec.rawText = raw;          // may be ""
+    rec.time = parsed;          // null if empty or invalid
     store.put(rec);
   } else {
-    // create new
+    // create new record (even if empty)
     store.add({
       focus: apptfocus,
-      rawText: raw,
-      time: parsed ?? null
+      rawText: raw,             // ""
+      time: parsed              // null
     });
   }
 
