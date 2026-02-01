@@ -308,19 +308,29 @@ document.getElementById("BtnArrived").addEventListener("click", async () => {
 logOutput.addEventListener("blur", async () => {
   if (!apptfocus) return;
 
-  const raw = logOutput.value;
-  const parsed = convertTypedTime(raw);
+  const raw = logOutput.value.trim();
+  if (!raw) return; // don’t create empty records
 
+  const parsed = convertTypedTime(raw);
   const rec = await getRecordByFocus(apptfocus);
-  if (!rec) return;
 
   const tx = db.transaction("logs", "readwrite");
   const store = tx.objectStore("logs");
 
-  rec.rawText = raw;
-  rec.time = parsed ?? rec.time;
+  if (rec) {
+    // update existing
+    rec.rawText = raw;
+    if (parsed) rec.time = parsed;
+    store.put(rec);
+  } else {
+    // create new
+    store.add({
+      focus: apptfocus,
+      rawText: raw,
+      time: parsed ?? null
+    });
+  }
 
-  store.put(rec);
   tx.oncomplete = loadTable;
 });
 
