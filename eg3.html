@@ -57,7 +57,7 @@ html, body {
 
   <div class="main-area">
     <span style="font-weight:600;">arrived</span>
-    <input id="logOutput" type="text" style="margin-left:10px;width:140px;">
+    <input id="logOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
 
     <table id="logTable" border="1" cellpadding="5" style="margin-top:10px;width:100%;">
       <thead>
@@ -363,6 +363,14 @@ document.getElementById("openTableBtn").addEventListener("click", () => {
     c.continue();
   };
 });
+
+  document.addEventListener("touchstart", (e) => {
+  if (e.target !== logOutput && isEditingLog) {
+    logOutput.blur();
+  }
+});
+
+  
 </script>
 
 </body>
