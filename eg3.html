@@ -56,7 +56,7 @@ html, body {
   <div class="control-panel" id="panel"></div>
 
   <div class="main-area">
-    <button id="BtnArrived">arrived</button>
+    <span style="font-weight:600;">arrived</span>
     <input id="logOutput" type="text" style="margin-left:10px;width:140px;">
 
     <table id="logTable" border="1" cellpadding="5" style="margin-top:10px;width:100%;">
@@ -286,31 +286,6 @@ logOutput.addEventListener("focus", () => {
 });
 
   
-document.getElementById("BtnArrived").addEventListener("click", async () => {
-  if (!apptfocus) return alert("Select a focus first");
-
-  const now = new Date().toLocaleTimeString();
-  logOutput.value = now;
-
-  const rec = await getRecordByFocus(apptfocus);
-  const tx = db.transaction("logs", "readwrite");
-  const store = tx.objectStore("logs");
-
-  if (rec) {
-    rec.rawText = now;
-    rec.time = now;
-    store.put(rec);
-  } else {
-    store.add({
-      focus: apptfocus,
-      rawText: now,
-      time: now
-    });
-  }
-
-  tx.oncomplete = loadTable;
-});
-
 /* ===========================
    OUTPUT BLUR (EDITABLE)
 =========================== */
