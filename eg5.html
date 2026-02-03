@@ -1,1 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>logger</title>
 
+<style>
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: sans-serif;
+}
+
+.app {
+  display: flex;
+  height: 100%;
+}
+
+.control-panel {
+      width: 35vw;
+      max-width: 120px;
+      border-right: 1px solid #ccc;
+      padding: 10px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+}
+
+.row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.row input[type="text"] {
+  width: 6ch;
+  padding: 4px;
+  font-size: 16px;
+}
+
+.main-area {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.event-row {
+  display: flex;
+  align-items: center; /* vertically center label + input */
+  gap: 6px;            /* space between label and textbox */
+  margin-bottom: 6px;  /* space between rows */
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <div class="control-panel" id="panel"></div>
+
+<div class="main-area">
+  <div class="event-row">
+    <label for="arrivedOutput">arrived</label>
+    <input id="arrivedOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+  </div>
+
+  <div class="event-row">
+    <label for="inOutput">in</label>
+    <input id="inOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+  </div>
+
+  <div class="event-row">
+    <label for="outOutput">out</label>
+    <input id="outOutput" type="text" inputmode="numeric" pattern="[0-9]*" style="margin-left:10px;width:140px;font-size:16px;">
+  </div>
+
+    <table id="logTable" border="1" cellpadding="5" style="margin-top:10px;width:100%;">
+      <thead>
+        <tr>
+          <th>index</th>
+          <th>appt time</th>
+          <th>event</th>   
+          <th>user input</th>
+          <th>timestamp</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button id="openTableBtn">open table</button>
+  </div>
+
+</div>
+
+<script>
+/* ===========================
+   STATE
+=========================== */
+let apptfocus = "";
+let db;
+let isEditingLog = false;
+  
+/* ===========================
+   BUILD ROWS
+=========================== */
+const panel = document.getElementById("panel");
+
+for (let i = 1; i <= 25; i++) {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.setAttribute("data-row-id", i);
+  
+  row.innerHTML = `
+    <input type="radio" name="slot">
+    <input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="${i}">
+  `;
+
+  panel.appendChild(row);
+}
+
+/* ===========================
+   ROW LOGIC
+=========================== */
+panel.querySelectorAll(".row").forEach(row => {
+  const radio = row.querySelector("input[type=radio]");
+  const textbox = row.querySelector("input[type=text]");
+
+radio.addEventListener("change", async () => {
+  await activateFocus(textbox.value);
+});
+
+textbox.addEventListener("focus", async () => {
+  radio.checked = true;
+
+  await activateFocus(textbox.value);
+
+  saveFocusRow(row.dataset.rowId, textbox.value);
+});
+
+
+textbox.addEventListener("blur", e => {
+  apptfocus = textbox.value.trim();
+  saveFocusRow(row.dataset.rowId, textbox.value);
+
+  // If focus is moving to logOutput, do nothing
+  if (e.relatedTarget === logOutput) return;
+
+  if (!isEditingLog) {
+    updateLogOutputForFocus();
+  }
+ });
+});
+
+/* ===========================
+   DB SETUP
+=========================== */
+const req = indexedDB.open("TimeLogDB", 1);
+
+req.onupgradeneeded = e => {
+  db = e.target.result;
+
+  if (!db.objectStoreNames.contains("logs")) {
+    const logs = db.createObjectStore("logs", {
+      keyPath: "id",
+      autoIncrement: true
+    });
+    logs.createIndex("focus", "focus", { unique: true });
+  }
+
+  if (!db.objectStoreNames.contains("focusRows")) {
+    db.createObjectStore("focusRows", {
+      keyPath: "rowId"
+    });
+  }
+};
+
+
+
+req.onsuccess = e => {
+  db = e.target.result;
+  restoreFocusRows();  
+  loadTable();
+};
+
+  req.onerror = e => {
+  console.error("IndexedDB open failed", e.target.error);
+};
+
+/* ===========================
+   DB HELPERS
+=========================== */
+function getRecordByFocus(focus) {
+  return new Promise(resolve => {
+    const tx = db.transaction("logs", "readonly");
+    const idx = tx.objectStore("logs").index("focus");
+    const r = idx.get(focus);
+    r.onsuccess = () => resolve(r.result || null);
+  });
+}
+
+  function saveFocusRow(rowId, label) {
+  const tx = db.transaction("focusRows", "readwrite");
+  const store = tx.objectStore("focusRows");
+
+  store.put({
+    rowId: Number(rowId),
+    label
+  });
+}
+
+function restoreFocusRows() {
+  const tx = db.transaction("focusRows", "readonly");
+  const store = tx.objectStore("focusRows");
+
+  store.openCursor().onsuccess = e => {
+    const cursor = e.target.result;
+    if (!cursor) return;
+
+    const { rowId, label } = cursor.value;
+    const row = document.querySelector(
+      `.row[data-row-id="${rowId}"]`
+    );
+
+    if (row) {
+      row.querySelector('input[type="text"]').value = label;
+    }
+
+    cursor.continue();
+  };
+}
+
+  async function activateFocus(val) {
+  apptfocus = val.trim();
+
+  if (!apptfocus) {
+    logOutput.value = "";
+    return;
+  }
+
+  const rec = await getRecordByFocus(apptfocus);
+  logOutput.value = rec ? (rec.rawText ?? "") : "";
+}
+
+/* ===========================
+   TABLE
+=========================== */
+const tbody = document.querySelector("#logTable tbody");
+
+function loadTable() {
+  tbody.innerHTML = "";
+  const tx = db.transaction("logs", "readonly");
+  tx.objectStore("logs").openCursor().onsuccess = e => {
+    const c = e.target.result;
+    if (!c) return;
+    const r = c.value;
+    tbody.innerHTML += `
+      <tr>
+        <td>${r.id}</td>
+        <td>${r.focus}</td>
+        <td>${r.event}</td>
+        <td>${r.rawText ?? ""}</td>
+        <td>${r.time ?? ""}</td>
+      </tr>`;
+    c.continue();
+  };
+}
+
+/* ===========================
+   UPDATE OUTPUT
+=========================== */
+async function updateLogOutputForFocus() {
+  if (isEditingLog) return;
+
+  if (!apptfocus) {
+    logOutput.value = "";
+    return;
+  }
+
+  const rec = await getRecordByFocus(apptfocus);
+  logOutput.value = rec ? (rec.rawText ?? "") : "";
+}
+
+
+
+/* ===========================
+   LOG BUTTON
+=========================== */
+const logOutput = document.getElementById("logOutput");
+
+logOutput.addEventListener("focus", () => {
+  isEditingLog = true;
+
+  if (!logOutput.value.trim()) {
+    const now = new Date();
+    let h = now.getHours();
+    const m = now.getMinutes();
+
+    h = h % 12 || 12; // 12h format
+    logOutput.value = `${h}${String(m).padStart(2, "0")}`;
+  }
+
+  // select all text
+  setTimeout(() => logOutput.select(), 0);
+});
+
+  
+/* ===========================
+   OUTPUT BLUR (EDITABLE)
+=========================== */
+logOutput.addEventListener("blur", async () => {
+  if (!apptfocus) {
+    isEditingLog = false;
+    return;
+  }
+
+  const raw = logOutput.value;           // EMPTY IS VALID
+  const parsed = convertTypedTime(raw);
+
+  const rec = await getRecordByFocus(apptfocus);
+
+  const tx = db.transaction("logs", "readwrite");
+  const store = tx.objectStore("logs");
+
+  if (rec) {
+    rec.rawText = raw;
+    rec.time = parsed ?? null;
+    store.put(rec);
+  } else {
+    store.add({
+      focus: apptfocus,
+      rawText: raw,
+      time: parsed ?? null
+    });
+  }
+
+  tx.oncomplete = () => {
+    isEditingLog = false;
+    loadTable();
+  };
+});
+
+
+/* ===========================
+   TIME CONVERTER
+=========================== */
+function convertTypedTime(text) {
+  text = text.trim();
+  if (!/^\d{3,4}$/.test(text)) return null;
+
+  const n = Number(text);
+  if (n < 0 || n > 2359) return null;
+
+  let hour = text.length === 3 ? Number(text[0]) : Number(text.slice(0, 2));
+  let min = Number(text.slice(-2));
+  if (min > 59) return null;
+
+  const am = hour >= 7 && hour <= 11;
+  let period = am ? "AM" : "PM";
+
+  if (hour > 12) hour -= 12;
+  if (hour === 0) hour = 12;
+
+  return `${hour}:${String(min).padStart(2,"0")} ${period}`;
+}
+
+/* ===========================
+   OPEN TABLE WINDOW
+=========================== */
+document.getElementById("openTableBtn").addEventListener("click", () => {
+  const tx = db.transaction("logs", "readonly");
+  const rows = [];
+
+  tx.objectStore("logs").openCursor().onsuccess = e => {
+    const c = e.target.result;
+    if (!c) {
+      const w = window.open("");
+      w.document.write(`<pre>${JSON.stringify(rows,null,2)}</pre>`);
+      return;
+    }
+    rows.push(c.value);
+    c.continue();
+  };
+});
+
+  document.addEventListener("touchstart", (e) => {
+  if (e.target !== logOutput && isEditingLog) {
+    logOutput.blur();
+  }
+});
+
+  
+</script>
+
+</body>
+</html>
