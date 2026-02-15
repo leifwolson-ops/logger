@@ -54,6 +54,13 @@ html, body {
   margin-bottom: 6px;  /* space between rows */
 }
 
+
+
+  
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+
+
 </style>
 </head>
 
@@ -91,13 +98,19 @@ html, body {
       </thead>
       <tbody></tbody>
     </table>
-    <button id="openTableBtn">open table</button>
   </div>
 
+  
 </div>
 
 <script>
 
+
+  if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+
+  
 /* ===========================
    BUILD ROWS
 =========================== */
@@ -110,8 +123,10 @@ for (let i = 1; i <= 25; i++) {
   
   row.innerHTML = `
     <input type="radio" name="slot">
-    <input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="${i}">
-  `;
+    <input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="${i}" 
+       onblur="saveApptTime(${i}, this.value)"> 
+      `;
+  
 
   panel.appendChild(row);
 }
@@ -141,6 +156,144 @@ function convertTypedTime(text) {
   return `${hour}:${String(min).padStart(2,"0")} ${period}`;
 }
 
+
+  function saveApptTime(rowId, value) {
+  const tx = db.transaction("apptTimes", "readwrite");
+  const store = tx.objectStore("apptTimes");
+  store.put({ rowId, value });
+}
+
+function loadApptTimes() {
+  const tx = db.transaction("apptTimes", "readonly");
+  const store = tx.objectStore("apptTimes");
+  const request = store.getAll();
+
+  request.onsuccess = function() {
+    request.result.forEach(item => {
+      const row = document.querySelector(`[data-row-id="${item.rowId}"] input[type="text"]`);
+      if (row) row.value = item.value;
+    });
+  };
+}
+
+
+function getSelectedApptTime() {
+  const selected = document.querySelector('input[name="slot"]:checked');
+  if (!selected) return "";
+
+  const row = selected.closest(".row");
+  return row.querySelector('input[type="text"]').value || "";
+}
+
+function saveLog(eventName, userInput) {
+  if (!userInput) return;
+
+  const timestamp = convertTypedTime(userInput);
+  if (!timestamp) return;
+
+  const apptTime = getSelectedApptTime();
+
+  const logEntry = {
+    index: logIndex++,
+    apptTime,
+    event: eventName,
+    userInput,
+    timestamp
+  };
+
+  const tx = db.transaction("logs", "readwrite");
+  const store = tx.objectStore("logs");
+  store.put(logEntry);
+
+  addRowToTable(logEntry);
+}
+
+
+
+document.getElementById("arrivedOutput")
+  .addEventListener("blur", function() {
+    saveLog("arrived", this.value);
+  });
+
+document.getElementById("inOutput")
+  .addEventListener("blur", function() {
+    saveLog("in", this.value);
+  });
+
+document.getElementById("outOutput")
+  .addEventListener("blur", function() {
+    saveLog("out", this.value);
+  });
+
+
+  function addRowToTable(data) {
+  const tbody = document.querySelector("#logTable tbody");
+
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td>${data.index}</td>
+    <td>${data.apptTime}</td>
+    <td>${data.event}</td>
+    <td>${data.userInput}</td>
+    <td>${data.timestamp}</td>
+  `;
+
+  tbody.appendChild(row);
+}
+
+function loadLogs() {
+  const tx = db.transaction("logs", "readonly");
+  const store = tx.objectStore("logs");
+  const request = store.getAll();
+
+  request.onsuccess = function() {
+    const logs = request.result.sort((a,b) => a.index - b.index);
+
+    logs.forEach(log => {
+      addRowToTable(log);
+    });
+
+    if (logs.length > 0) {
+      logIndex = logs[logs.length - 1].index + 1;
+    }
+  };
+}
+
+
+  /* ===========================
+   INDEXED DB SETUP
+=========================== */
+
+let db;
+let logIndex = 1;
+
+const request = indexedDB.open("LoggerDB", 1);
+
+request.onupgradeneeded = function(e) {
+  db = e.target.result;
+
+  if (!db.objectStoreNames.contains("logs")) {
+    const store = db.createObjectStore("logs", { keyPath: "index" });
+  }
+
+  if (!db.objectStoreNames.contains("apptTimes")) {
+    db.createObjectStore("apptTimes", { keyPath: "rowId" });
+  }
+};
+
+request.onsuccess = function(e) {
+  db = e.target.result;
+  loadApptTimes();
+  loadLogs();
+};
+
+request.onerror = function() {
+  console.error("DB failed to open");
+};
+
+
+
+  
   
 </script>
 
