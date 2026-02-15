@@ -1,17 +1,21 @@
-const CACHE_NAME = 'time-pwa-cache-v1';
-const urlsToCache = ['index.html', 'app.js', 'style.css', 'manifest.json'];
+const CACHE_NAME = "logger-cache-v1";
+const urlsToCache = [
+  "/",
+  "/index.html"
+];
 
-// Install
-self.addEventListener('install', (event) => {
+self.addEventListener("install", function(event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(function(cache) {
+      return cache.addAll(urlsToCache);
+    })
   );
 });
 
-// Fetch
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", function(event) {
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => response || fetch(event.request))
+    caches.match(event.request).then(function(response) {
+      return response || fetch(event.request);
+    })
   );
 });
