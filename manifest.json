@@ -1,10 +1,10 @@
 {
-  "name": "Time Input PWA",
-  "short_name": "TimePWA",
+  "name": "Logger App",
+  "short_name": "Logger",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#007bff",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "icon-192.png",
