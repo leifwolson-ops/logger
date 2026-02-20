@@ -4,7 +4,10 @@
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
+    navigator.serviceWorker
+      .register("service-worker.js", { updateViaCache: "none" })
+      .then(reg => reg.update())
+      .catch(err => console.error("Service worker registration failed", err));
   }
 });
 
@@ -14,6 +17,7 @@ window.addEventListener("load", () => {
 
 let db;
 let logIndex = 1;
+const SELECTED_ROW_KEY = "selectedApptRowId";
 
 const request = indexedDB.open("LoggerDB", 2);
 
@@ -50,6 +54,7 @@ request.onupgradeneeded = function(e) {
 request.onsuccess = function(e) {
   db = e.target.result;
   loadApptTimes();
+  restoreSelectedRow();
   loadLogs();
 };
 
@@ -63,19 +68,30 @@ request.onerror = function() {
 
 const panel = document.getElementById("panel");
 
-for (let i = 1; i <= 25; i++) {
+if (panel) {
+  for (let i = 1; i <= 25; i++) {
 
-  const row = document.createElement("div");
-  row.className = "row";
-  row.setAttribute("data-row-id", i);
+    const row = document.createElement("div");
+    row.className = "row";
+    row.setAttribute("data-row-id", i);
 
-  row.innerHTML = `
-    <input type="radio" name="slot">
-    <input type="text" inputmode="numeric"
-           onblur="saveApptTime(${i}, this.value)">
-  `;
+    row.innerHTML = `
+      <input type="radio" name="slot">
+      <input type="text" inputmode="numeric"
+             onblur="saveApptTime(${i}, this.value)">
+    `;
 
-  panel.appendChild(row);
+    const radio = row.querySelector('input[type="radio"]');
+    radio.addEventListener("change", () => {
+      if (radio.checked) {
+        localStorage.setItem(SELECTED_ROW_KEY, String(i));
+      }
+    });
+
+    panel.appendChild(row);
+  }
+} else {
+  console.error("#panel not found in HTML. Rows cannot be rendered.");
 }
 
 /* ===========================
@@ -133,6 +149,17 @@ function loadApptTimes(){
   };
 }
 
+function restoreSelectedRow() {
+  const savedRowId = localStorage.getItem(SELECTED_ROW_KEY);
+  if (!savedRowId) return;
+
+  const radio = document.querySelector(
+    `[data-row-id="${savedRowId}"] input[type="radio"]`
+  );
+
+  if (radio) radio.checked = true;
+}
+
 /* ===========================
    LOGGING
 =========================== */
@@ -144,7 +171,37 @@ function getSelectedApptTime(){
   if(!selected) return "";
 
   const row = selected.closest(".row");
-  return row.querySelector('input[type="text"]').value || "";
+    return row.querySelector('input[type="text"]').value || "";
+}
+
+function populateEventInputsForApptTime(apptTime){
+
+  const arrivedInput = document.getElementById("arrivedOutput");
+  const inInput = document.getElementById("inOutput");
+  const outInput = document.getElementById("outOutput");
+
+  arrivedInput.value = "";
+  inInput.value = "";
+  outInput.value = "";
+
+  if(!db || !apptTime) return;
+
+  const tx = db.transaction("logs","readonly");
+  const store = tx.objectStore("logs");
+  const req = store.getAll();
+
+  req.onsuccess = function(){
+
+    const matchingLogs = req.result.filter(log =>
+      log.apptTime === apptTime
+    );
+
+    matchingLogs.forEach(log => {
+      if(log.event === "arrived") arrivedInput.value = log.userInput;
+      if(log.event === "in") inInput.value = log.userInput;
+      if(log.event === "out") outInput.value = log.userInput;
+    });
+  };
 }
 
 function saveLog(eventName,userInput){
@@ -256,6 +313,16 @@ document.getElementById("arrivedOutput")
 .addEventListener("blur",function(){
   saveLog("arrived",this.value);
   this.value="";
+});
+
+panel.addEventListener("change",function(e){
+  if(e.target.matches('input[type="radio"][name="slot"]')){
+    const row = e.target.closest(".row");
+    const apptTime =
+      row?.querySelector('input[type="text"]')?.value || "";
+
+    populateEventInputsForApptTime(apptTime);
+  }
 });
 
 document.getElementById("inOutput")
