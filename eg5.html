@@ -186,43 +186,90 @@ function getSelectedApptTime() {
 }
 
 function saveLog(eventName, userInput) {
+
   if (!userInput) return;
 
   const timestamp = convertTypedTime(userInput);
   if (!timestamp) return;
 
   const apptTime = getSelectedApptTime();
-
-  const logEntry = {
-    index: logIndex++,
-    apptTime,
-    event: eventName,
-    userInput,
-    timestamp
-  };
+  if (!apptTime) return;
 
   const tx = db.transaction("logs", "readwrite");
   const store = tx.objectStore("logs");
-  store.put(logEntry);
+  const index = store.index("appt_event");
 
-  addRowToTable(logEntry);
+  const lookup = index.get([apptTime, eventName]);
+
+  lookup.onsuccess = function() {
+
+    let record = lookup.result;
+
+    /* =====================
+       MATCH FOUND → UPDATE
+    ====================== */
+    if (record) {
+
+      record.userInput = userInput;
+      record.timestamp = timestamp;
+
+      store.put(record);
+      updateRowInTable(record);
+    }
+
+    /* =====================
+       NO MATCH → CREATE
+    ====================== */
+    else {
+
+      record = {
+        index: logIndex++,
+        apptTime,
+        event: eventName,
+        userInput,
+        timestamp
+      };
+
+      store.put(record);
+      addRowToTable(record);
+    }
+  };
 }
 
+  
+  function updateRowInTable(data) {
 
+  const rows = document.querySelectorAll("#logTable tbody tr");
+
+  rows.forEach(r => {
+
+    if (Number(r.children[0].textContent) === data.index) {
+
+      r.children[1].textContent = data.apptTime;
+      r.children[2].textContent = data.event;
+      r.children[3].textContent = data.userInput;
+      r.children[4].textContent = data.timestamp;
+    }
+  });
+}
+  
 
 document.getElementById("arrivedOutput")
   .addEventListener("blur", function() {
-    saveLog("arrived", this.value);
+    ssaveLog("arrived", this.value);
+this.value = "";
   });
 
 document.getElementById("inOutput")
   .addEventListener("blur", function() {
-    saveLog("in", this.value);
+    saveLog("arrived", this.value);
+this.value = "";
   });
 
 document.getElementById("outOutput")
   .addEventListener("blur", function() {
-    saveLog("out", this.value);
+    saveLog("arrived", this.value);
+this.value = "";
   });
 
 
@@ -267,18 +314,50 @@ function loadLogs() {
 let db;
 let logIndex = 1;
 
-const request = indexedDB.open("LoggerDB", 1);
+const request = indexedDB.open("LoggerDB", 2);
 
 request.onupgradeneeded = function(e) {
+
   db = e.target.result;
 
+  /* ======================
+     CREATE LOG STORE
+  ====================== */
+
+  let logStore;
+
   if (!db.objectStoreNames.contains("logs")) {
-    const store = db.createObjectStore("logs", { keyPath: "index" });
+
+    logStore = db.createObjectStore("logs", {
+      keyPath: "index"
+    });
+
+  } else {
+
+    logStore = e.target.transaction.objectStore("logs");
   }
+
+  /* ======================
+     ADD COMPOSITE INDEX
+  ====================== */
+
+  if (!logStore.indexNames.contains("appt_event")) {
+
+    logStore.createIndex(
+      "appt_event",        // index name
+      ["apptTime","event"],// fields
+      { unique:false }
+    );
+  }
+
+  /* ======================
+     APPT TIMES STORE
+  ====================== */
 
   if (!db.objectStoreNames.contains("apptTimes")) {
     db.createObjectStore("apptTimes", { keyPath: "rowId" });
   }
+
 };
 
 request.onsuccess = function(e) {
