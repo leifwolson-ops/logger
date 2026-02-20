@@ -55,13 +55,11 @@ html, body {
 }
 
 
+</style>
 
-  
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ffffff">
-
-
-</style>
+  
 </head>
 
 <body>
@@ -105,10 +103,6 @@ html, body {
 
 <script>
 
-
-  if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
 
   
 /* ===========================
@@ -157,11 +151,15 @@ function convertTypedTime(text) {
 }
 
 
-  function saveApptTime(rowId, value) {
+function saveApptTime(rowId, value) {
+
+  if (!db) return;   // wait until DB ready
+
   const tx = db.transaction("apptTimes", "readwrite");
   const store = tx.objectStore("apptTimes");
   store.put({ rowId, value });
 }
+
 
 function loadApptTimes() {
   const tx = db.transaction("apptTimes", "readonly");
@@ -256,19 +254,19 @@ function saveLog(eventName, userInput) {
 
 document.getElementById("arrivedOutput")
   .addEventListener("blur", function() {
-    ssaveLog("arrived", this.value);
+    saveLog("arrived", this.value);
 this.value = "";
   });
 
 document.getElementById("inOutput")
   .addEventListener("blur", function() {
-    saveLog("arrived", this.value);
+    saveLog("in", this.value);
 this.value = "";
   });
 
 document.getElementById("outOutput")
   .addEventListener("blur", function() {
-    saveLog("arrived", this.value);
+    saveLog("out", this.value);
 this.value = "";
   });
 
@@ -371,7 +369,11 @@ request.onerror = function() {
 };
 
 
-
+window.addEventListener("load", () => {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
+  }
+});
   
   
 </script>
