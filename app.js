@@ -1,96 +1,271 @@
-// =====================
-// IndexedDB setup
-// =====================
-let db;
-const request = indexedDB.open('TimeDB', 1);
+/* ===========================
+   SERVICE WORKER
+=========================== */
 
-request.onerror = (event) => {
-  console.error('Database error:', event.target.error);
-};
-
-request.onupgradeneeded = (event) => {
-  db = event.target.result;
-  db.createObjectStore('times', { keyPath: 'id', autoIncrement: true });
-};
-
-request.onsuccess = (event) => {
-  db = event.target.result;
-  console.log('DB ready');
-  displayTable();
-};
-
-// =====================
-// Time textbox logic
-// =====================
-const timeBox = document.getElementById('timeBox');
-let currentID = null; // track last entry for edits
-
-function formatDate(date) {
-  const pad = n => n.toString().padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
-
-// Fill textbox with current time on focus (always)
-timeBox.addEventListener('focus', () => {
-  const now = new Date();
-  timeBox.value = formatDate(now); // update to current time
-});
-
-// Save new or updated time on blur
-timeBox.addEventListener('blur', () => {
-  const newTime = timeBox.value.trim();
-  if (!newTime) return;
-
-  const transaction = db.transaction(['times'], 'readwrite');
-  const store = transaction.objectStore('times');
-
-  if (currentID === null) {
-    // Add new entry
-    const requestAdd = store.add({ time: newTime });
-    requestAdd.onsuccess = (event) => {
-      currentID = event.target.result;
-      displayTable();
-    };
-  } else {
-    // Update last entry
-    const getRequest = store.get(currentID);
-    getRequest.onsuccess = () => {
-      const data = getRequest.result;
-      if (!data) return;
-      data.time = newTime;
-      const updateRequest = store.put(data);
-      updateRequest.onsuccess = () => displayTable();
-    };
+window.addEventListener("load", () => {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
   }
 });
 
-// =====================
-// Display table
-// =====================
-function displayTable() {
+/* ===========================
+   INDEXED DB SETUP
+=========================== */
+
+let db;
+let logIndex = 1;
+
+const request = indexedDB.open("LoggerDB", 2);
+
+request.onupgradeneeded = function(e) {
+
+  db = e.target.result;
+  let logStore;
+
+  if (!db.objectStoreNames.contains("logs")) {
+
+    logStore = db.createObjectStore("logs", {
+      keyPath: "index"
+    });
+
+  } else {
+
+    logStore = e.target.transaction.objectStore("logs");
+  }
+
+  if (!logStore.indexNames.contains("appt_event")) {
+
+    logStore.createIndex(
+      "appt_event",
+      ["apptTime","event"],
+      { unique:false }
+    );
+  }
+
+  if (!db.objectStoreNames.contains("apptTimes")) {
+    db.createObjectStore("apptTimes", { keyPath: "rowId" });
+  }
+};
+
+request.onsuccess = function(e) {
+  db = e.target.result;
+  loadApptTimes();
+  loadLogs();
+};
+
+request.onerror = function() {
+  console.error("DB failed to open");
+};
+
+/* ===========================
+   BUILD ROWS
+=========================== */
+
+const panel = document.getElementById("panel");
+
+for (let i = 1; i <= 25; i++) {
+
+  const row = document.createElement("div");
+  row.className = "row";
+  row.setAttribute("data-row-id", i);
+
+  row.innerHTML = `
+    <input type="radio" name="slot">
+    <input type="text" inputmode="numeric"
+           onblur="saveApptTime(${i}, this.value)">
+  `;
+
+  panel.appendChild(row);
+}
+
+/* ===========================
+   TIME CONVERTER
+=========================== */
+
+function convertTypedTime(text) {
+
+  text = text.trim();
+  if (!/^\d{3,4}$/.test(text)) return null;
+
+  let hour = text.length === 3
+    ? Number(text[0])
+    : Number(text.slice(0,2));
+
+  let min = Number(text.slice(-2));
+  if (min > 59) return null;
+
+  const am = hour >= 7 && hour <= 11;
+  let period = am ? "AM" : "PM";
+
+  if (hour > 12) hour -= 12;
+  if (hour === 0) hour = 12;
+
+  return `${hour}:${String(min).padStart(2,"0")} ${period}`;
+}
+
+/* ===========================
+   APPT TIMES
+=========================== */
+
+function saveApptTime(rowId,value){
+
   if (!db) return;
-  const tableBody = document.querySelector('#timeTable tbody');
-  tableBody.innerHTML = '';
 
-  const transaction = db.transaction(['times'], 'readonly');
-  const store = transaction.objectStore('times');
+  const tx = db.transaction("apptTimes","readwrite");
+  const store = tx.objectStore("apptTimes");
+  store.put({rowId,value});
+}
 
-  store.openCursor().onsuccess = (event) => {
-    const cursor = event.target.result;
-    if (cursor) {
-      const row = document.createElement('tr');
-      row.innerHTML = `<td>${cursor.value.id}</td><td>${cursor.value.time}</td>`;
-      tableBody.appendChild(row);
-      cursor.continue();
+function loadApptTimes(){
+
+  const tx = db.transaction("apptTimes","readonly");
+  const store = tx.objectStore("apptTimes");
+  const req = store.getAll();
+
+  req.onsuccess = function(){
+
+    req.result.forEach(item=>{
+      const row = document.querySelector(
+        `[data-row-id="${item.rowId}"] input[type="text"]`
+      );
+      if(row) row.value = item.value;
+    });
+  };
+}
+
+/* ===========================
+   LOGGING
+=========================== */
+
+function getSelectedApptTime(){
+
+  const selected =
+    document.querySelector('input[name="slot"]:checked');
+  if(!selected) return "";
+
+  const row = selected.closest(".row");
+  return row.querySelector('input[type="text"]').value || "";
+}
+
+function saveLog(eventName,userInput){
+
+  if(!db || !userInput) return;
+
+  const timestamp = convertTypedTime(userInput);
+  if(!timestamp) return;
+
+  const apptTime = getSelectedApptTime();
+  if(!apptTime) return;
+
+  const tx = db.transaction("logs","readwrite");
+  const store = tx.objectStore("logs");
+  const idx = store.index("appt_event");
+
+  const lookup = idx.get([apptTime,eventName]);
+
+  lookup.onsuccess = function(){
+
+    let record = lookup.result;
+
+    if(record){
+
+      record.userInput = userInput;
+      record.timestamp = timestamp;
+
+      store.put(record);
+      updateRowInTable(record);
+
+    } else {
+
+      record = {
+        index: logIndex++,
+        apptTime,
+        event: eventName,
+        userInput,
+        timestamp
+      };
+
+      store.put(record);
+      addRowToTable(record);
     }
   };
 }
 
-// =====================
-// Service worker registration
-// =====================
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js')
-    .then(() => console.log('Service Worker Registered'))
-    .catch(err => console.error('SW registration failed:', err));
+/* ===========================
+   TABLE
+=========================== */
+
+function addRowToTable(data){
+
+  const tbody =
+    document.querySelector("#logTable tbody");
+
+  const row = document.createElement("tr");
+
+  row.innerHTML = `
+    <td>${data.index}</td>
+    <td>${data.apptTime}</td>
+    <td>${data.event}</td>
+    <td>${data.userInput}</td>
+    <td>${data.timestamp}</td>
+  `;
+
+  tbody.appendChild(row);
 }
+
+function updateRowInTable(data){
+
+  const rows =
+    document.querySelectorAll("#logTable tbody tr");
+
+  rows.forEach(r=>{
+    if(Number(r.children[0].textContent)
+       === data.index){
+
+      r.children[1].textContent = data.apptTime;
+      r.children[2].textContent = data.event;
+      r.children[3].textContent = data.userInput;
+      r.children[4].textContent = data.timestamp;
+    }
+  });
+}
+
+function loadLogs(){
+
+  const tx = db.transaction("logs","readonly");
+  const store = tx.objectStore("logs");
+  const req = store.getAll();
+
+  req.onsuccess = function(){
+
+    const logs =
+      req.result.sort((a,b)=>a.index-b.index);
+
+    logs.forEach(addRowToTable);
+
+    if(logs.length>0)
+      logIndex = logs.at(-1).index + 1;
+  };
+}
+
+/* ===========================
+   EVENT INPUTS
+=========================== */
+
+document.getElementById("arrivedOutput")
+.addEventListener("blur",function(){
+  saveLog("arrived",this.value);
+  this.value="";
+});
+
+document.getElementById("inOutput")
+.addEventListener("blur",function(){
+  saveLog("in",this.value);
+  this.value="";
+});
+
+document.getElementById("outOutput")
+.addEventListener("blur",function(){
+  saveLog("out",this.value);
+  this.value="";
+});
