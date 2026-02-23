@@ -14,6 +14,7 @@ window.addEventListener("load", () => {
 
 let db;
 let logIndex = 1;
+let populateRequestId = 0;
 
 const request = indexedDB.open("LoggerDB", 2);
 
@@ -181,6 +182,7 @@ function populateEventInputsForApptTime(apptTime){
   const arrivedInput = document.getElementById("arrivedOutput");
   const inInput = document.getElementById("inOutput");
   const outInput = document.getElementById("outOutput");
+  const requestId = ++populateRequestId;
 
   arrivedInput.value = "";
   inInput.value = "";
@@ -193,6 +195,11 @@ function populateEventInputsForApptTime(apptTime){
   const req = store.getAll();
 
   req.onsuccess = function(){
+
+    if(requestId !== populateRequestId) return;
+
+    const selectedApptTime = getSelectedApptTime();
+    if(selectedApptTime !== apptTime) return;
 
     const matchingLogs = req.result.filter(log =>
       log.apptTime === apptTime
