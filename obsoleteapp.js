@@ -4,7 +4,10 @@
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
+    navigator.serviceWorker
+      .register("service-worker.js", { updateViaCache: "none" })
+      .then(reg => reg.update())
+      .catch(err => console.error("Service worker registration failed", err));
   }
 });
 
@@ -14,6 +17,7 @@ window.addEventListener("load", () => {
 
 let db;
 let logIndex = 1;
+const SELECTED_ROW_KEY = "selectedApptRowId";
 
 const request = indexedDB.open("LoggerDB", 2);
 
@@ -50,6 +54,7 @@ request.onupgradeneeded = function(e) {
 request.onsuccess = function(e) {
   db = e.target.result;
   loadApptTimes();
+  restoreSelectedRow();
   loadLogs();
 };
 
@@ -63,18 +68,30 @@ request.onerror = function() {
 
 const panel = document.getElementById("panel");
 
-for (let i = 1; i <= 25; i++) {
+if (panel) {
+  for (let i = 1; i <= 25; i++) {
 
-  const row = document.createElement("div");
-  row.className = "row";
-  row.setAttribute("data-row-id", i);
+    const row = document.createElement("div");
+    row.className = "row";
+    row.setAttribute("data-row-id", i);
 
-  row.innerHTML = `
-    <input type="radio" name="slot">
-    <input type="text" inputmode="numeric">
-  `;
+    row.innerHTML = `
+      <input type="radio" name="slot">
+      <input type="text" inputmode="numeric"
+             onblur="saveApptTime(${i}, this.value)">
+    `;
 
-  panel.appendChild(row);
+    const radio = row.querySelector('input[type="radio"]');
+    radio.addEventListener("change", () => {
+      if (radio.checked) {
+        localStorage.setItem(SELECTED_ROW_KEY, String(i));
+      }
+    });
+
+    panel.appendChild(row);
+  }
+} else {
+  console.error("#panel not found in HTML. Rows cannot be rendered.");
 }
 
 /* ===========================
@@ -102,15 +119,6 @@ function convertTypedTime(text) {
   return `${hour}:${String(min).padStart(2,"0")} ${period}`;
 }
 
-function getCurrentTimeInput() {
-  const now = new Date();
-  let hour = now.getHours() % 12;
-  if (hour === 0) hour = 12;
-
-  const min = String(now.getMinutes()).padStart(2, "0");
-  return `${hour}${min}`;
-}
-
 /* ===========================
    APPT TIMES
 =========================== */
@@ -122,27 +130,6 @@ function saveApptTime(rowId,value){
   const tx = db.transaction("apptTimes","readwrite");
   const store = tx.objectStore("apptTimes");
   store.put({rowId,value});
-}
-
-function updateLogApptTimes(oldApptTime,newApptTime){
-
-  if (!db || !oldApptTime || !newApptTime || oldApptTime === newApptTime) {
-    return;
-  }
-
-  const tx = db.transaction("logs", "readwrite");
-  const store = tx.objectStore("logs");
-  const req = store.getAll();
-
-  req.onsuccess = function(){
-    req.result.forEach(record => {
-      if(record.apptTime !== oldApptTime) return;
-
-      record.apptTime = newApptTime;
-      store.put(record);
-      updateRowInTable(record);
-    });
-  };
 }
 
 function loadApptTimes(){
@@ -162,6 +149,17 @@ function loadApptTimes(){
   };
 }
 
+function restoreSelectedRow() {
+  const savedRowId = localStorage.getItem(SELECTED_ROW_KEY);
+  if (!savedRowId) return;
+
+  const radio = document.querySelector(
+    `[data-row-id="${savedRowId}"] input[type="radio"]`
+  );
+
+  if (radio) radio.checked = true;
+}
+
 /* ===========================
    LOGGING
 =========================== */
@@ -173,7 +171,7 @@ function getSelectedApptTime(){
   if(!selected) return "";
 
   const row = selected.closest(".row");
-  return row.querySelector('input[type="text"]').value || "";
+    return row.querySelector('input[type="text"]').value || "";
 }
 
 function populateEventInputsForApptTime(apptTime){
@@ -311,96 +309,11 @@ function loadLogs(){
    EVENT INPUTS
 =========================== */
 
-function selectAllText(target){
-  if(!(target instanceof HTMLInputElement)) return;
-  if(target.type !== "text") return;
-
-  setTimeout(() => target.select(), 0);
-}
-
-function handleEventInputFocus(input,eventName){
-
-  if(!input.value){
-    input.value = getCurrentTimeInput();
-    saveLog(eventName,input.value);
-  }
-
-  selectAllText(input);
-}
-
 document.getElementById("arrivedOutput")
 .addEventListener("blur",function(){
   saveLog("arrived",this.value);
+  this.value="";
 });
-
-document.getElementById("inOutput")
-.addEventListener("blur",function(){
-  saveLog("in",this.value);
-});
-
-document.getElementById("outOutput")
-.addEventListener("blur",function(){
-  saveLog("out",this.value);
-});
-
-document.getElementById("arrivedOutput")
-.addEventListener("focus",function(){
-  handleEventInputFocus(this,"arrived");
-});
-
-document.getElementById("inOutput")
-.addEventListener("focus",function(){
-  handleEventInputFocus(this,"in");
-});
-
-document.getElementById("outOutput")
-.addEventListener("focus",function(){
-  handleEventInputFocus(this,"out");
-});
-
-panel.addEventListener("focusin",function(e){
-  const target = e.target;
-  if(!(target instanceof HTMLInputElement)) return;
-  if(target.type !== "text") return;
-
-  target.dataset.previousValue = target.value;
-});
-
-panel.addEventListener("focus",function(e){
-  const target = e.target;
-  if(!(target instanceof HTMLInputElement)) return;
-  if(target.type !== "text") return;
-
-  const radio = target.closest(".row")?.querySelector('input[type="radio"]');
-  if(!radio) return;
-
-  if(!radio.checked) radio.checked = true;
-  radio.dispatchEvent(new Event("change", { bubbles:true }));
-
-  selectAllText(target);
-},true);
-
-panel.addEventListener("blur",function(e){
-  const target = e.target;
-  if(!(target instanceof HTMLInputElement)) return;
-  if(target.type !== "text") return;
-
-  const rowId = Number(target.closest(".row")?.dataset.rowId || 0);
-  if(!rowId) return;
-
-  const oldApptTime = target.dataset.previousValue || "";
-  const newApptTime = target.value || "";
-
-  saveApptTime(rowId,newApptTime);
-  updateLogApptTimes(oldApptTime,newApptTime);
-
-  const radio = target.closest(".row")?.querySelector('input[type="radio"]');
-  if(radio?.checked){
-    populateEventInputsForApptTime(newApptTime);
-  }
-
-  delete target.dataset.previousValue;
-},true);
 
 panel.addEventListener("change",function(e){
   if(e.target.matches('input[type="radio"][name="slot"]')){
@@ -410,4 +323,16 @@ panel.addEventListener("change",function(e){
 
     populateEventInputsForApptTime(apptTime);
   }
+});
+
+document.getElementById("inOutput")
+.addEventListener("blur",function(){
+  saveLog("in",this.value);
+  this.value="";
+});
+
+document.getElementById("outOutput")
+.addEventListener("blur",function(){
+  saveLog("out",this.value);
+  this.value="";
 });
