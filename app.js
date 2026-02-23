@@ -448,6 +448,18 @@ panel.addEventListener("blur",function(e){
   delete target.dataset.previousValue;
 },true);
 
+
+panel.addEventListener("input",function(e){
+  const target = e.target;
+  if(!(target instanceof HTMLInputElement)) return;
+  if(target.type !== "text") return;
+
+  const radio = target.closest(".row")?.querySelector('input[type="radio"]');
+  if(!radio?.checked) return;
+
+  populateEventInputsForApptTime(target.value || "");
+});
+
 panel.addEventListener("change",function(e){
   if(e.target.matches('input[type="radio"][name="slot"]')){
     const row = e.target.closest(".row");
