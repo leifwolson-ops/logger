@@ -250,6 +250,28 @@ function saveLog(eventName,userInput){
   };
 }
 
+function deleteLog(eventName){
+
+  if(!db) return;
+
+  const apptTime = getSelectedApptTime();
+  if(!apptTime) return;
+
+  const tx = db.transaction("logs","readwrite");
+  const store = tx.objectStore("logs");
+  const idx = store.index("appt_event");
+
+  const lookup = idx.get([apptTime,eventName]);
+
+  lookup.onsuccess = function(){
+    const record = lookup.result;
+    if(!record) return;
+
+    store.delete(record.index);
+    removeRowFromTable(record.index);
+  };
+}
+
 /* ===========================
    TABLE
 =========================== */
@@ -285,6 +307,18 @@ function updateRowInTable(data){
       r.children[2].textContent = data.event;
       r.children[3].textContent = data.userInput;
       r.children[4].textContent = data.timestamp;
+    }
+  });
+}
+
+function removeRowFromTable(index){
+
+  const rows =
+    document.querySelectorAll("#logTable tbody tr");
+
+  rows.forEach(r=>{
+    if(Number(r.children[0].textContent) === index){
+      r.remove();
     }
   });
 }
@@ -330,17 +364,29 @@ function handleEventInputFocus(input,eventName){
 
 document.getElementById("arrivedOutput")
 .addEventListener("blur",function(){
-  saveLog("arrived",this.value);
+  if(this.value){
+    saveLog("arrived",this.value);
+  } else {
+    deleteLog("arrived");
+  }
 });
 
 document.getElementById("inOutput")
 .addEventListener("blur",function(){
-  saveLog("in",this.value);
+  if(this.value){
+    saveLog("in",this.value);
+  } else {
+    deleteLog("in");
+  }
 });
 
 document.getElementById("outOutput")
 .addEventListener("blur",function(){
-  saveLog("out",this.value);
+  if(this.value){
+    saveLog("out",this.value);
+  } else {
+    deleteLog("out");
+  }
 });
 
 document.getElementById("arrivedOutput")
