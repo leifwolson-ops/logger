@@ -355,6 +355,7 @@ function loadLogs(){
 function selectAllText(target){
   if(!(target instanceof HTMLInputElement)) return;
   if(target.type !== "text") return;
+  if(!target.value) return;
 
   setTimeout(() => target.select(), 0);
 }
@@ -409,6 +410,13 @@ document.getElementById("inOutput")
 document.getElementById("outOutput")
 .addEventListener("focus",function(){
   handleEventInputFocus(this,"out");
+});
+
+document.addEventListener("click",function(e){
+  const target = e.target;
+  if(!(target instanceof HTMLInputElement)) return;
+  if(target.type !== "text") return;
+  selectAllText(target);
 });
 
 panel.addEventListener("focusin",function(e){
