@@ -127,8 +127,8 @@ function saveApptTime(rowId,value){
 
 function updateLogApptTimes(oldApptTime,newApptTime){
 
-  if (!db || !oldApptTime || !newApptTime || oldApptTime === newApptTime) {
-    return;
+  if (!db || !oldApptTime || oldApptTime === newApptTime) {
+        return;
   }
 
   const tx = db.transaction("logs", "readwrite");
@@ -138,6 +138,12 @@ function updateLogApptTimes(oldApptTime,newApptTime){
   req.onsuccess = function(){
     req.result.forEach(record => {
       if(record.apptTime !== oldApptTime) return;
+
+      if(!newApptTime){
+        store.delete(record.index);
+        removeRowFromTable(record.index);
+        return;
+      }
 
       record.apptTime = newApptTime;
       store.put(record);
