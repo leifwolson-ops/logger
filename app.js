@@ -122,7 +122,12 @@ function saveApptTime(rowId,value){
 
   const tx = db.transaction("apptTimes","readwrite");
   const store = tx.objectStore("apptTimes");
-  store.put({rowId,value});
+  
+  if(value){
+    store.put({rowId,value});
+  } else {
+    store.delete(rowId);
+  }
 }
 
 function updateLogApptTimes(oldApptTime,newApptTime){
@@ -164,7 +169,10 @@ function loadApptTimes(){
       const row = document.querySelector(
         `[data-row-id="${item.rowId}"] input[type="text"]`
       );
-      if(row) row.value = item.value;
+      if(row){
+        row.value = item.value;
+        row.dataset.lastSavedApptTime = item.value;
+      }
     });
   };
 }
@@ -455,12 +463,14 @@ panel.addEventListener("blur",function(e){
   const rowId = Number(target.closest(".row")?.dataset.rowId || 0);
   if(!rowId) return;
 
-  const oldApptTime = target.dataset.previousValue || "";
-  const newApptTime = target.value || "";
+  const oldApptTime =
+    target.dataset.lastSavedApptTime ||
+    target.dataset.previousValue || "";  const newApptTime = target.value || "";
 
   saveApptTime(rowId,newApptTime);
   updateLogApptTimes(oldApptTime,newApptTime);
-
+  target.dataset.lastSavedApptTime = newApptTime;
+  
   const radio = target.closest(".row")?.querySelector('input[type="radio"]');
   if(radio?.checked){
     populateEventInputsForApptTime(newApptTime);
